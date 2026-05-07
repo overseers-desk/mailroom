@@ -1,6 +1,6 @@
 # USP Ranking
 
-Re-ranked USP list synthesised from `voices.md`, `competitive-landscape.md`, and `use-case-survey.md`. Snapshot May 2026.
+USP list synthesised from `voices.md`, `competitive-landscape.md`, and `use-case-survey.md`. Snapshot May 2026.
 
 The ranking sorts by demand (how often users voice the underlying pain) multiplied by differentiation (how rare the supply is among MCP email servers and commercial agentic-email products). Defensive USPs (real correctness, no voiced demand) rank lower deliberately, even where they are technically unique.
 
@@ -19,7 +19,7 @@ The ranking sorts by demand (how often users voice the underlying pain) multipli
 11. **Multi-account simultaneous search.** `-A` queries every configured `[imap.*]` block in parallel and returns per-block-attributed results.
 12. **Verb-chain in one CLI invocation.** `mailroom -A search foo search bar read -f INBOX -u 42` collapses the LLM's natural fan-out into one process call. (`mailroom/__main__.py`)
 
-## Re-ranked by demand-times-differentiation
+## Ranked by demand-times-differentiation
 
 | Rank | USP | Demand | Differentiation | Tier |
 |---|---|---|---|---|
@@ -27,11 +27,11 @@ The ranking sorts by demand (how often users voice the underlying pain) multipli
 | 2 | #1 Identity resolution on reply | LobsterMail dedicated post; AgentMail seed-pitched it; Highflame "agent identity crisis"; HN multi-account complaints | Unique. No competitor handles alias / role-address / plus-tag matching | Headline moat |
 | 3 | #7 plus #8 plus #9 search-quality stack | Most-cited technical complaint about IMAP-based AI tools; Gemini's most-marketed feature is NL inbox search; Haakam21 on HN: "crappy keyword search" is the deal-breaker | #7 rare (2 servers), #8 unique, #9 common. Composite is unique | Headline moat |
 | 4 | #11 Multi-account simultaneous (`-A`) | Use case #9 in the survey; Shortwave's Gmail-only is recurring criticism; figassis on HN: "Gmail only is a bait-and-switch" | Rare. Only mailroom does parallel fan-out across generic IMAP | Strong differentiator |
-| 5 | #5 Draft saving, re-framed as safety primitive | OpenClaw incident on TechCrunch (February 2026); Harper Reed pivoted his workflow after unauthorised send; jimmcslim on HN: "I would very much like read-only mode!" | Common as a feature, **unique as a positioning angle**. No competitor frames it as the agentic-safety answer | Free win, copy change only |
+| 5 | #5 Draft saving as safety primitive | OpenClaw incident on TechCrunch (February 2026); Harper Reed pivoted his workflow after unauthorised send; jimmcslim on HN: "I would very much like read-only mode!" | Common as a feature, **unique as a positioning angle**. No competitor frames it as the agentic-safety answer | Positioning angle |
 | 6 | #12 Verb-chain (CLI fan-out collapse) | Reduces cost of triage (use case #1); not user-voiced but maps to triage tutorials | Unique | Developer-credibility USP. Technical readers appreciate it; non-technical readers will not |
 | 7 | #10 .ics RSVP | Use case #6; HN wrongsahil: "will it work for hidden calendars?" The ask is broader than RSVP. Users want availability awareness | Unique | Narrow but real |
 | 8 | #6 Connection lifecycle | Mailbird's "2025-2026 IMAP crisis"; users do not say "stale connection", they say "search hangs" | Rare | Defensive, silent correctness |
-| 9 | #4 Folder realism (SPECIAL-USE plus sent-copy) | Outlook sent-copy issue acknowledged in Fastmail docs but not user-voiced as a frustration | Unique | Defensive, discovered in production |
+| 9 | #4 Folder realism (SPECIAL-USE plus sent-copy) | Outlook sent-copy issue acknowledged in Fastmail docs but not user-voiced as a frustration | Unique | Defensive, production correctness |
 | 10 | #2 Markdown to HTML auto-upgrade | Zero community evidence as voiced demand; output-quality polish | Unique | Defensive, pure correctness |
 
 ## Confirmed gaps
@@ -44,14 +44,6 @@ In rough priority for positioning impact and feasibility.
 4. **IMAP IDLE / push notifications.** `codefuturist/email-mcp` ships this with multi-channel alerts. Enables event-driven agents (the "watch for X then trigger Y" pattern). Real feature gap.
 5. **Free / busy availability check beyond .ics RSVP.** Both voices and survey cite this. Probably out of scope for an IMAP / MCP layer (needs CalDAV or Google Calendar API). The demand is clear; the architectural fit is not.
 6. **Voice / tone matching.** Top-three commercial pitch (Superhuman Auto Draft, Shortwave Ghostwriter, Gemini Help Me Write). Out of scope for the IMAP layer; solved at the prompt-engineering layer above mailroom. Worth a one-line "mailroom gives the LLM what it needs to do this; prompt strategy is up to you" disclaimer to pre-empt the question.
-
-## What changed from the prior USP list
-
-- Promoted: USP #3 (redaction) is now rank 1. Was framed as "the security USP"; the evidence shows it is the strongest USP, not an honourable mention.
-- Promoted: USP #5 (draft saving) re-framed as safety primitive. Single highest-leverage copy change in the project.
-- Demoted: USP #2 (markdown HTML) and USP #4 (folder realism). Real, but solving a problem nobody is voicing. Keep them in the feature list; do not headline.
-- New gap surfaced: OAuth for Outlook / Microsoft 365. Real adoption-blocker territory.
-- Confirmed: USP #11 multi-account and USP #12 verb-chain are correctly placed. #11 is a strong differentiator with cross-source demand; #12 is unique but developer-flavoured and will not pull non-technical users.
 
 ## Suggested landing-page hero
 
