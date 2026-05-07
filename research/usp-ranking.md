@@ -44,17 +44,3 @@ In rough priority for positioning impact and feasibility.
 4. **IMAP IDLE / push notifications.** `codefuturist/email-mcp` ships this with multi-channel alerts. Enables event-driven agents (the "watch for X then trigger Y" pattern). Real feature gap.
 5. **Free / busy availability check beyond .ics RSVP.** Both voices and survey cite this. Probably out of scope for an IMAP / MCP layer (needs CalDAV or Google Calendar API). The demand is clear; the architectural fit is not.
 6. **Voice / tone matching.** Top-three commercial pitch (Superhuman Auto Draft, Shortwave Ghostwriter, Gemini Help Me Write). Out of scope for the IMAP layer; solved at the prompt-engineering layer above mailroom. Worth a one-line "mailroom gives the LLM what it needs to do this; prompt strategy is up to you" disclaimer to pre-empt the question.
-
-## Suggested landing-page hero
-
-Strongest-first ordering, drawn from words users use in `voices.md`:
-
-> Give your AI agent access to email without giving up the inbox.
->
-> - **Redaction policy in your hands.** Per-mailbox Sieve rules blank sensitive bodies before they ever reach the model. Newsletters, banking, OTPs, anything you do not want in an LLM's context window: gone before the agent reads it.
-> - **Drafts by default.** Every reply lands in your IMAP Drafts folder, viewable from your phone, syncing to your laptop. The agent writes; you press send.
-> - **Replies from the right address.** If a message came to `you+work@example.com`, the reply goes from `you+work@example.com`. Plus-tags, role addresses, multiple aliases per mailbox: handled at the protocol layer, not guessed.
-> - **Search that actually works.** Gmail-style query DSL, X-GM-RAW passthrough on Gmail, optional local-cache fallback via `mu` for archive-grade speed across 50k-plus messages.
-> - **Every mailbox in one call.** Search across personal, work, and role inboxes simultaneously with `-A`, no per-account fan-out.
-
-Three of the five lines above are moats; the remaining two are demand-pull features matching what people are explicitly asking for online.
