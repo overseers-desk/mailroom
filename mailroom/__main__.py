@@ -403,10 +403,18 @@ def _execute_chain(
     return result
 
 
-def _parse_search_args(tokens: List[str]) -> Dict[str, Any]:
-    """Parse tokenised search arguments into a kwargs dict."""
-    folder: Optional[str] = None
-    limit = 10
+def _parse_search_args(
+    tokens: List[str],
+    default_folder: Optional[str] = None,
+    default_limit: int = 10,
+) -> Dict[str, Any]:
+    """Parse tokenised search arguments into a kwargs dict.
+
+    ``default_folder`` and ``default_limit`` let the chain dispatcher pass
+    chain-level ``-f``/``-n`` values through; per-verb tokens override them.
+    """
+    folder: Optional[str] = default_folder
+    limit = default_limit
     query_parts: List[str] = []
     i = 0
     while i < len(tokens):
@@ -431,9 +439,16 @@ def _parse_search_args(tokens: List[str]) -> Dict[str, Any]:
     return {"query": " ".join(query_parts), "folder": folder, "limit": limit}
 
 
-def _parse_read_args(tokens: List[str]) -> Dict[str, Any]:
-    """Parse tokenised read arguments into a kwargs dict."""
-    folder: Optional[str] = None
+def _parse_read_args(
+    tokens: List[str],
+    default_folder: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Parse tokenised read arguments into a kwargs dict.
+
+    ``default_folder`` lets the chain dispatcher pass a chain-level ``-f``
+    value through; a per-verb folder token overrides it.
+    """
+    folder: Optional[str] = default_folder
     uid: Optional[int] = None
     i = 0
     while i < len(tokens):
@@ -477,18 +492,66 @@ _VERB_FLAGS_VALUE: Dict[str, set] = {
 }
 
 
+def _peel_chain_tail_flags(
+    rest: List[str],
+) -> Tuple[List[str], Dict[str, Any]]:
+    """Peel chain-level ``-n/--limit`` and ``-f/--folder`` off the tail.
+
+    A trailing ``-n N`` or ``-f F`` (or their long / equals forms) at the
+    end of ``rest`` becomes a chain-level default applied to every chained
+    verb that does not set its own value. Stops at the first non-tail-flag
+    token, so a flag interior to a verb stays with that verb.
+    """
+    chain: Dict[str, Any] = {}
+    rest = list(rest)
+    while rest:
+        last = rest[-1]
+        if last.startswith("--limit=") and "limit" not in chain:
+            try:
+                chain["limit"] = int(last.split("=", 1)[1])
+            except ValueError:
+                break
+            rest.pop()
+            continue
+        if last.startswith("--folder=") and "folder" not in chain:
+            chain["folder"] = last.split("=", 1)[1]
+            rest.pop()
+            continue
+        if len(rest) >= 2:
+            flag = rest[-2]
+            value = rest[-1]
+            if flag in ("-n", "--limit") and "limit" not in chain:
+                try:
+                    chain["limit"] = int(value)
+                except ValueError:
+                    break
+                rest.pop()
+                rest.pop()
+                continue
+            if flag in ("-f", "--folder") and "folder" not in chain:
+                chain["folder"] = value
+                rest.pop()
+                rest.pop()
+                continue
+        break
+    return rest, chain
+
+
 def _split_chain_argv(
     argv: List[str],
-) -> Optional[Tuple[List[str], List[Tuple[str, List[str]]], str]]:
+) -> Optional[Tuple[List[str], List[Tuple[str, List[str]]], str, Dict[str, Any]]]:
     """Detect a verb-chain invocation and split argv into its parts.
 
-    Returns ``(global_argv, [(verb, verb_tokens), ...], output_format)`` when
-    two or more chainable verbs are found at command position; ``None``
-    otherwise so the caller can fall back to typer dispatch.
+    Returns ``(global_argv, [(verb, verb_tokens), ...], output_format,
+    chain_defaults)`` when two or more chainable verbs are found at command
+    position; ``None`` otherwise so the caller can fall back to typer
+    dispatch.
 
     Walks argv left to right in two passes. The first pass strips global
-    flags and the chain-level ``--format/-F`` option. The second pass walks
-    the remainder, splitting on chainable-verb tokens while respecting each
+    flags and the chain-level ``--format/-F`` option. Trailing chain-level
+    ``-n/--limit`` and ``-f/--folder`` flags are peeled off next so they
+    apply as defaults to every chained verb. The second pass walks the
+    remainder, splitting on chainable-verb tokens while respecting each
     verb's value-taking flags so a folder named ``search`` does not split
     the chain.
     """
@@ -536,6 +599,8 @@ def _split_chain_argv(
     if not rest or rest[0] not in _CHAINABLE_VERBS:
         return None
 
+    rest, chain_defaults = _peel_chain_tail_flags(rest)
+
     verbs: List[Tuple[str, List[str]]] = []
     cur_verb: Optional[str] = None
     cur_args: List[str] = []
@@ -575,7 +640,7 @@ def _split_chain_argv(
 
     if len(verbs) < 2:
         return None
-    return (globals_, verbs, out_format)
+    return (globals_, verbs, out_format, chain_defaults)
 
 
 def _apply_global_flags(global_argv: List[str]) -> None:
@@ -628,20 +693,30 @@ def _apply_global_flags(global_argv: List[str]) -> None:
 def _run_chain(
     verbs: List[Tuple[str, List[str]]],
     output_format: str,
+    chain_defaults: Optional[Dict[str, Any]] = None,
 ) -> int:
     """Execute a parsed verb-chain. Returns the process exit code.
 
     Builds the operations list from each verb's parsed kwargs, resolves the
     [imap.NAME] blocks under the global flags already applied to module
-    state, and dispatches to ``_execute_chain``.
+    state, and dispatches to ``_execute_chain``. ``chain_defaults`` carries
+    the chain-level ``-n/--limit`` and ``-f/--folder`` values peeled off
+    the chain tail; per-verb tokens override them.
     """
+    chain_defaults = chain_defaults or {}
+    cd_folder = chain_defaults.get("folder")
+    cd_limit = chain_defaults.get("limit")
     operations: List[Tuple[str, str, Dict[str, Any]]] = []
     for verb, tokens in verbs:
         if verb == "search":
-            kwargs = _parse_search_args(tokens)
+            kwargs = _parse_search_args(
+                tokens,
+                default_folder=cd_folder,
+                default_limit=cd_limit if cd_limit is not None else 10,
+            )
         elif verb == "read":
             try:
-                kwargs = _parse_read_args(tokens)
+                kwargs = _parse_read_args(tokens, default_folder=cd_folder)
             except ValueError as exc:
                 typer.echo(f"Error: {exc}", err=True)
                 return 2
@@ -2820,9 +2895,9 @@ def main() -> None:
     sys.argv[1:] = _rewrite_argv(sys.argv[1:])
     chain = _split_chain_argv(sys.argv[1:])
     if chain is not None:
-        global_argv, verbs, output_format = chain
+        global_argv, verbs, output_format, chain_defaults = chain
         _apply_global_flags(global_argv)
-        sys.exit(_run_chain(verbs, output_format))
+        sys.exit(_run_chain(verbs, output_format, chain_defaults))
     _print_eager_warnings_if_relevant()
     app()
 

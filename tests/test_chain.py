@@ -26,6 +26,7 @@ from mailroom.__main__ import (
     _execute_chain,
     _parse_read_args,
     _parse_search_args,
+    _peel_chain_tail_flags,
     _run_chain,
     _split_chain_argv,
     app,
@@ -118,6 +119,22 @@ class TestParseSearchArgs:
         r = _parse_search_args(["--unknown", "from:foo"])
         assert r["query"] == "from:foo"
 
+    def test_default_folder_used_when_unset(self):
+        r = _parse_search_args(["from:foo"], default_folder="Sent")
+        assert r["folder"] == "Sent"
+
+    def test_per_verb_folder_overrides_default(self):
+        r = _parse_search_args(["-f", "Drafts", "from:foo"], default_folder="Sent")
+        assert r["folder"] == "Drafts"
+
+    def test_default_limit_used_when_unset(self):
+        r = _parse_search_args(["from:foo"], default_limit=50)
+        assert r["limit"] == 50
+
+    def test_per_verb_limit_overrides_default(self):
+        r = _parse_search_args(["-n", "5", "from:foo"], default_limit=50)
+        assert r["limit"] == 5
+
 
 class TestParseReadArgs:
     def test_basic(self):
@@ -192,7 +209,7 @@ class TestSplitChainArgv:
             ["-A", "-c", "/tmp/x.toml", "search", "foo", "search", "bar"]
         )
         assert s is not None
-        global_argv, verbs, _ = s
+        global_argv, verbs, _, _ = s
         assert "-A" in global_argv
         assert "-c" in global_argv
         assert "/tmp/x.toml" in global_argv
@@ -222,6 +239,95 @@ class TestSplitChainArgv:
 
     def test_only_one_verb_returns_none_even_with_format(self):
         assert _split_chain_argv(["search", "foo", "--format", "json"]) is None
+
+    def test_chain_defaults_limit_at_tail(self):
+        s = _split_chain_argv(["search", "a", "search", "b", "-n", "50"])
+        assert s is not None
+        assert s[3] == {"limit": 50}
+        assert s[1] == [("search", ["a"]), ("search", ["b"])]
+
+    def test_chain_defaults_folder_at_tail(self):
+        s = _split_chain_argv(["search", "a", "search", "b", "-f", "Sent"])
+        assert s is not None
+        assert s[3] == {"folder": "Sent"}
+
+    def test_chain_defaults_both_flags_at_tail(self):
+        s = _split_chain_argv(["search", "a", "search", "b", "-n", "50", "-f", "Sent"])
+        assert s is not None
+        assert s[3] == {"limit": 50, "folder": "Sent"}
+
+    def test_per_verb_flag_not_promoted_to_chain(self):
+        # ``-n 5`` interior to the first verb stays per-verb; the second
+        # verb has no -n so its limit is the parser default.
+        s = _split_chain_argv(["search", "-n", "5", "a", "search", "b"])
+        assert s is not None
+        assert s[3] == {}
+        assert s[1] == [("search", ["-n", "5", "a"]), ("search", ["b"])]
+
+
+# ---------------------------------------------------------------------------
+# _peel_chain_tail_flags
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "rest,expected_rest,expected_chain",
+    [
+        ([], [], {}),
+        (["search", "x"], ["search", "x"], {}),
+        (
+            ["search", "a", "search", "b", "-n", "50"],
+            ["search", "a", "search", "b"],
+            {"limit": 50},
+        ),
+        (
+            ["search", "a", "search", "b", "--limit", "20"],
+            ["search", "a", "search", "b"],
+            {"limit": 20},
+        ),
+        (
+            ["search", "a", "search", "b", "--limit=15"],
+            ["search", "a", "search", "b"],
+            {"limit": 15},
+        ),
+        (
+            ["search", "a", "search", "b", "-f", "Sent"],
+            ["search", "a", "search", "b"],
+            {"folder": "Sent"},
+        ),
+        (
+            ["search", "a", "search", "b", "--folder=Drafts"],
+            ["search", "a", "search", "b"],
+            {"folder": "Drafts"},
+        ),
+        (
+            ["search", "a", "search", "b", "-n", "50", "-f", "Sent"],
+            ["search", "a", "search", "b"],
+            {"limit": 50, "folder": "Sent"},
+        ),
+        (
+            ["search", "a", "search", "b", "-f", "Sent", "-n", "50"],
+            ["search", "a", "search", "b"],
+            {"limit": 50, "folder": "Sent"},
+        ),
+        # per-verb tokens preserved when no chain-tail flag follows
+        (
+            ["search", "-n", "5", "a", "search", "b"],
+            ["search", "-n", "5", "a", "search", "b"],
+            {},
+        ),
+        # non-integer limit halts peeling at that flag
+        (
+            ["search", "a", "search", "b", "-n", "notanint"],
+            ["search", "a", "search", "b", "-n", "notanint"],
+            {},
+        ),
+    ],
+)
+def test_peel_chain_tail_flags(rest, expected_rest, expected_chain):
+    out_rest, out_chain = _peel_chain_tail_flags(rest)
+    assert out_rest == expected_rest
+    assert out_chain == expected_chain
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +587,118 @@ class TestRunChain:
         assert code == 0
         first = capsys.readouterr().out.strip().splitlines()[0]
         assert first.split("\t")[0].startswith("search ")
+
+    def test_chain_default_limit_applied_to_all_verbs(self, capsys):
+        _apply_global_flags([])
+        seen_limits: List[int] = []
+
+        def factory(name):
+            client = MagicMock()
+
+            def fake_search(query, folder=None, limit=10):
+                seen_limits.append(limit)
+                return _fake_search_result(query)
+
+            client.search_emails.side_effect = fake_search
+            return client
+
+        with (
+            _patch_config(),
+            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+        ):
+            code = _run_chain(
+                [("search", ["a"]), ("search", ["b"]), ("search", ["c"])],
+                "json",
+                {"limit": 50},
+            )
+        assert code == 0
+        assert seen_limits == [50, 50, 50]
+
+    def test_chain_default_limit_overridden_per_verb(self, capsys):
+        _apply_global_flags([])
+        seen_limits: List[int] = []
+
+        def factory(name):
+            client = MagicMock()
+
+            def fake_search(query, folder=None, limit=10):
+                seen_limits.append(limit)
+                return _fake_search_result(query)
+
+            client.search_emails.side_effect = fake_search
+            return client
+
+        with (
+            _patch_config(),
+            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+        ):
+            code = _run_chain(
+                [("search", ["-n", "5", "a"]), ("search", ["b"])],
+                "json",
+                {"limit": 50},
+            )
+        assert code == 0
+        assert seen_limits == [5, 50]
+
+    def test_chain_default_folder_applied_to_all_verbs(self, capsys):
+        _apply_global_flags([])
+        seen_folders: List[Optional[str]] = []
+
+        def factory(name):
+            client = MagicMock()
+
+            def fake_search(query, folder=None, limit=10):
+                seen_folders.append(folder)
+                return _fake_search_result(query)
+
+            client.search_emails.side_effect = fake_search
+            return client
+
+        with (
+            _patch_config(),
+            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+        ):
+            code = _run_chain(
+                [("search", ["a"]), ("search", ["b"])],
+                "json",
+                {"folder": "Sent"},
+            )
+        assert code == 0
+        assert seen_folders == ["Sent", "Sent"]
+
+    def test_chain_default_folder_used_for_read_when_unset(self, capsys):
+        _apply_global_flags([])
+
+        def factory(name):
+            client = MagicMock()
+            client.search_emails.return_value = _fake_search_result()
+            email = MagicMock()
+            email.from_ = MagicMock(__str__=lambda s: "alice@example.com")
+            email.to = []
+            email.subject = "Hello"
+            email.date = None
+            email.flags = []
+            email.message_id = "<hello@example.com>"
+            email.content.html = None
+            email.content.text = "body"
+            email.in_reply_to = None
+            email.references = None
+            email.cc = []
+            email.attachments = []
+            client.fetch_email.return_value = email
+            return client
+
+        with (
+            _patch_config(),
+            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+        ):
+            # read has only -u; chain default supplies folder
+            code = _run_chain(
+                [("search", ["foo"]), ("read", ["-u", "1"])],
+                "json",
+                {"folder": "INBOX"},
+            )
+        assert code == 0
 
 
 # ---------------------------------------------------------------------------
