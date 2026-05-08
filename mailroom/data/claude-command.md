@@ -94,7 +94,7 @@ mailroom -A search "sergio" search "panedas" search "sergiopanedas"
 
 Each keyword sits under its own outer key in the result, so a message comes labelled with the keyword that matched it. Output is JSON of shape `{op_key: {imap_name: {results: [...], provenance: {...}}}}`. With `[local_cache]` configured the queries run against a local index orders of magnitude faster than IMAP; without it queries hit IMAP directly. Each per-term response carries a `provenance` field reporting `source` (`"local"` or `"remote"`) and any fall-back reason.
 
-`from:alice OR from:bob` sends one server query with no per-keyword attribution; prefer it when speed matters and attribution does not.
+A term may itself be an OR clause: `mailroom -A search "from:@csair.com OR 'China Southern'" search "renfe"`. Each term still costs one server query and keeps its own result key. A bare `from:alice OR from:bob` with no chained terms returns one flat union with no per-key attribution.
 
 `mailroom -A` queries every imap block; `-i NAME` (repeatable) selects specific blocks. Verbs mix freely: `mailroom search foo read -f INBOX -u 42` runs the search and the fetch over one connection per block.
 
