@@ -1315,23 +1315,49 @@ def list_cmd() -> None:
         print(f"warn: {w}", file=sys.stderr)
 
 
+def _installed_command_version() -> Optional[str]:
+    """Return the version stamped in ~/.claude/commands/mailroom.md, or None.
+
+    Reads the ``version:`` frontmatter field written by ``install-claude-command``.
+    Returns None when the file is absent or carries no version field (pre-versioning
+    installs).
+    """
+    command_file = Path.home() / ".claude" / "commands" / "mailroom.md"
+    if not command_file.exists():
+        return None
+    for line in command_file.read_text().splitlines():
+        if line.startswith("version:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
 def _claude_registration_status() -> Optional[str]:
-    """Return a nudge string if ~/.claude exists but mailroom is not registered.
+    """Return a nudge string if ~/.claude exists but mailroom is not registered or is stale.
 
     Returns None when ~/.claude is absent (user has no Claude Code install)
-    or when mailroom is already registered (nothing to say).
+    or when mailroom is already registered at the current version.
     """
     claude_dir = Path.home() / ".claude"
     if not claude_dir.exists():
         return None
     command_file = claude_dir / "commands" / "mailroom.md"
     skill_dir = claude_dir / "skills" / "mailroom"
-    if command_file.exists() or skill_dir.exists():
+    if skill_dir.exists():
         return None
-    return (
-        "note: Claude Code config found but mailroom is not registered. "
-        "Run `mailroom install-claude-command` to add it."
-    )
+    if not command_file.exists():
+        return (
+            "note: Claude Code config found but mailroom is not registered. "
+            "Run `mailroom install-claude-command` to add it."
+        )
+    installed = _installed_command_version()
+    if installed != __version__:
+        installed_label = installed if installed else "unknown"
+        return (
+            f"note: mailroom command installed at version {installed_label}, "
+            f"current is {__version__}. "
+            "Run `mailroom install-claude-command` to update."
+        )
+    return None
 
 
 @app.command("status")
@@ -1364,20 +1390,44 @@ def status() -> None:
 
 
 @app.command("install-claude-command")
-def install_claude_command() -> None:
+def install_claude_command(
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite without prompting."),
+) -> None:
     """Copy the Claude Code command file into ~/.claude/commands/mailroom.md.
 
     After running this command, Claude Code will recognise the ``mailroom``
     skill and route email-related requests through the mailroom CLI.
+    If a previous version is already installed, you will be asked to confirm
+    before it is replaced.
     """
     from importlib.resources import files
 
     dest_dir = Path.home() / ".claude" / "commands"
     dest = dest_dir / "mailroom.md"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    content = files("mailroom.data").joinpath("claude-command.md").read_text()
+
+    if dest.exists() and not force:
+        installed = _installed_command_version()
+        installed_label = installed if installed else "unknown version"
+        if installed == __version__:
+            print(f"Already at {__version__}: {dest}")
+            return
+        confirmed = typer.confirm(
+            f"mailroom command already installed ({installed_label}). "
+            f"Replace with {__version__}?"
+        )
+        if not confirmed:
+            print("Aborted.")
+            raise typer.Exit(1)
+
+    raw = files("mailroom.data").joinpath("claude-command.md").read_text()
+    # Stamp the current version into the frontmatter of the installed copy.
+    if raw.startswith("---\n"):
+        content = "---\nversion: " + __version__ + "\n" + raw[4:]
+    else:
+        content = raw
     dest.write_text(content)
-    print(f"Installed: {dest}")
+    print(f"Installed {__version__}: {dest}")
 
 
 def _probe_all(cfg: MailroomConfig) -> List[Tuple[str, str, str, str]]:
