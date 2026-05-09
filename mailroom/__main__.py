@@ -93,7 +93,6 @@ def _global_options(
     imap_names: List[str] = typer.Option(
         [],
         "--imap",
-        "-i",
         help=(
             "[imap.NAME] block to use. Uses default_imap if omitted. "
             "Repeat for several blocks."
@@ -486,7 +485,7 @@ def _parse_read_args(
 
 _CHAINABLE_VERBS = {"search", "read"}
 
-_GLOBAL_FLAGS_VALUE = {"-c", "--config", "-i", "--imap"}
+_GLOBAL_FLAGS_VALUE = {"-c", "--config", "--imap"}
 _GLOBAL_FLAGS_BOOL = {"-A", "--all-imap", "-v", "--verbose", "--version"}
 
 _VERB_FLAGS_VALUE: Dict[str, set] = {
@@ -580,7 +579,7 @@ def _split_chain_argv(
             globals_.append(tok)
             i += 1
             continue
-        if tok.startswith("-i=") or tok.startswith("--imap="):
+        if tok.startswith("--imap="):
             globals_.append(tok)
             i += 1
             continue
@@ -670,11 +669,11 @@ def _apply_global_flags(global_argv: List[str]) -> None:
             cfg_path = tok.split("=", 1)[1]
             i += 1
             continue
-        if tok in ("-i", "--imap") and i + 1 < len(global_argv):
+        if tok == "--imap" and i + 1 < len(global_argv):
             imap_names.append(global_argv[i + 1])
             i += 2
             continue
-        if tok.startswith("--imap=") or tok.startswith("-i="):
+        if tok.startswith("--imap="):
             imap_names.append(tok.split("=", 1)[1])
             i += 1
             continue
@@ -1111,7 +1110,7 @@ def _print_eager_warnings_if_relevant() -> None:
     they then run a real command.
     """
     args = sys.argv[1:]
-    globals_with_value = {"--config", "-c", "--imap", "-i"}
+    globals_with_value = {"--config", "-c", "--imap"}
 
     config_path: Optional[str] = None
     first_real: Optional[str] = None
@@ -1696,7 +1695,7 @@ def copy_cmd(
 ) -> None:
     """Copy an email from one [imap.NAME] block into another.
 
-    The global --imap/-i selects the destination block.
+    The global --imap selects the destination block.
     Fetches the raw RFC 822 message from the source and APPENDs it to the
     destination, preserving the message byte-for-byte and its original date.
     """
@@ -2079,9 +2078,9 @@ def compose(
         help=(
             "Send as the named [identity.NAME] block (resolves From, "
             "display name, IMAP block, SMTP, sent_folder). Required on "
-            "--send unless --smtp/--from is given. (Note: --identity is "
-            "the long form; -i/--imap selects an [imap.NAME] block, "
-            "which is a different thing.)"
+            "--send unless --smtp/--from is given. (Note: --identity "
+            "selects an [identity.NAME] block; --imap selects an "
+            "[imap.NAME] block, which is a different thing.)"
         ),
     ),
     smtp_name: Optional[str] = typer.Option(
@@ -2890,7 +2889,7 @@ def _rewrite_argv(argv: List[str]) -> List[str]:
     if os.environ.get("_MAILROOM_COMPLETE"):
         return argv
     out = list(argv)
-    globals_with_value = {"--config", "-c", "--imap", "-i"}
+    globals_with_value = {"--config", "-c", "--imap"}
     sub_idx: Optional[int] = None
     i = 0
     while i < len(out):
@@ -2923,11 +2922,11 @@ def _rewrite_argv(argv: List[str]) -> List[str]:
     j = sub_idx + 1
     while j < len(out):
         tok = out[j]
-        if tok in ("--imap", "-i") and j + 1 < len(out):
+        if tok == "--imap" and j + 1 < len(out):
             imap_values.append(out[j + 1])
             j += 2
             continue
-        if tok.startswith("--imap=") or tok.startswith("-i="):
+        if tok.startswith("--imap="):
             imap_values.append(tok.split("=", 1)[1])
             j += 1
             continue

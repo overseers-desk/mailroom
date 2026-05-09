@@ -55,7 +55,7 @@ JSON output includes `message_id_sent` (recipient-visible Message-ID; differs fr
 ## Replies
 
 ```bash
-mailroom -i <imap> reply -f <folder> -u <uid> --body "..." --send --identity NAME
+mailroom --imap <imap> reply -f <folder> -u <uid> --body "..." --send --identity NAME
 ```
 
 Without `--identity`, mailroom matches the parent's recipients against the imap block's identities and uses the matching one. A miss errors rather than guessing. Threading headers set from parent automatically. `--reply-all`, `--cc`, `--body-html`, `--bcc`, `--attach` work the same as on `compose`. Drop `--send` to save a draft instead.
@@ -63,18 +63,18 @@ Without `--identity`, mailroom matches the parent's recipients against the imap 
 ## Sending an existing draft
 
 ```bash
-mailroom -i <imap> send-draft -f Drafts -u <uid>
+mailroom --imap <imap> send-draft -f Drafts -u <uid>
 ```
 
 Reads draft, matches From to an imap identity, transmits, removes on success. `--keep-draft` retains it. `--dry-run` authenticates without sending. `--bcc` adds envelope-time recipients without rewriting the draft body. `--identity NAME` overrides the draft's From; `--smtp NAME --from EMAIL` is mode B.
 
 ## Top-level flags
 
-- `-i, --imap NAME`: select a configured `[imap.NAME]` block. Omit to use `default_imap`. Repeat with `search` to query multiple blocks.
+- `--imap NAME`: select a configured `[imap.NAME]` block. Omit to use `default_imap`. Repeat with `search` to query multiple blocks.
 - `-A, --all-imap`: query every imap block (search only).
 - `-c, --config PATH`: alternate config file.
 
-Migration: `-a <account>` → `-i <imap>`; `[[identities]]` → `[identity.NAME]`.
+Migration: `-a <account>` → `--imap <name>`; `[[identities]]` → `[identity.NAME]`.
 
 ## After a successful send
 
@@ -117,22 +117,22 @@ mailroom -A --format json \
   > "$RESULTS"
 ```
 
-`mailroom -A` queries every imap block; `-i NAME` (repeatable) selects specific blocks. Verbs mix freely: `mailroom search "from:alice@example.com is:unread" read -u 42 -f INBOX` runs the search and the fetch over one connection per block.
+`mailroom -A` queries every imap block; `--imap NAME` (repeatable) selects specific blocks. Verbs mix freely: `mailroom search "from:alice@example.com is:unread" read -u 42 -f INBOX` runs the search and the fetch over one connection per block.
 
 Like `search`, `read` chains. Repeat the verb to fetch several UIDs over one IMAP session, instead of N parallel `mailroom read` processes paying N fresh logins (Gmail caps simultaneous IMAP connections per account). Trailing `-f FOLDER` peels off as a chain default, so each `read` reuses the folder:
 
 ```bash
 RESULTS=$(mktemp /tmp/mailroom.XXXXXXXX)
-mailroom -i <imap> --format json read -u 100 read -u 200 read -u 300 -f INBOX > "$RESULTS"
+mailroom --imap <imap> --format json read -u 100 read -u 200 read -u 300 -f INBOX > "$RESULTS"
 jq '[.[] | .[] | {uid, subject, from, date}]' "$RESULTS"
 ```
 
 List and extract attachments, or export the verbatim `.eml`:
 
 ```bash
-mailroom -i <imap> attachments -f <folder> -u <uid>
-mailroom -i <imap> save -f <folder> -u <uid> -i <name> -o <path>
-mailroom -i <imap> export -f <folder> -u <uid> --raw -o /tmp/msg.eml
+mailroom --imap <imap> attachments -f <folder> -u <uid>
+mailroom --imap <imap> save -f <folder> -u <uid> -i <name> -o <path>
+mailroom --imap <imap> export -f <folder> -u <uid> --raw -o /tmp/msg.eml
 ```
 
 `mailroom list` enumerates configured blocks/identities/SMTP. Run it only when the user explicitly asks.

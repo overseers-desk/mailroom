@@ -27,6 +27,7 @@ from mailroom.__main__ import (
     _parse_read_args,
     _parse_search_args,
     _peel_chain_tail_flags,
+    _rewrite_argv,
     _run_chain,
     _split_chain_argv,
     app,
@@ -222,10 +223,10 @@ class TestSplitChainArgv:
 
     def test_repeated_imap(self):
         s = _split_chain_argv(
-            ["-i", "acct1", "-i", "acct2", "search", "foo", "search", "bar"]
+            ["--imap", "acct1", "--imap", "acct2", "search", "foo", "search", "bar"]
         )
         assert s is not None
-        assert s[0].count("-i") == 2
+        assert s[0].count("--imap") == 2
 
     def test_format_flag_extracted(self):
         s = _split_chain_argv(["search", "foo", "search", "bar", "--format", "oneline"])
@@ -739,7 +740,7 @@ class TestSingleOpUnchanged:
 
 class TestApplyGlobalFlags:
     def test_imap_repeats(self):
-        _apply_global_flags(["-i", "a", "-i", "b"])
+        _apply_global_flags(["--imap", "a", "--imap", "b"])
         from mailroom.__main__ import _imap_names
 
         assert _imap_names == ["a", "b"]
@@ -747,7 +748,7 @@ class TestApplyGlobalFlags:
         _apply_global_flags([])
 
     def test_imap_equals_form(self):
-        _apply_global_flags(["--imap=a", "-i=b"])
+        _apply_global_flags(["--imap=a", "--imap=b"])
         from mailroom.__main__ import _imap_names
 
         assert _imap_names == ["a", "b"]
@@ -771,3 +772,47 @@ class TestApplyGlobalFlags:
         with pytest.raises(SystemExit) as exc_info:
             _apply_global_flags(["--version"])
         assert exc_info.value.code == 0
+
+
+# ---------------------------------------------------------------------------
+# _rewrite_argv
+# ---------------------------------------------------------------------------
+
+
+class TestRewriteArgv:
+    def test_save_dash_i_not_hoisted_as_imap(self):
+        # Regression: issue #36. `-i` after `save` is `--identifier`, not
+        # `--imap`; the hoist preprocessor must leave it alone.
+        out = _rewrite_argv(
+            [
+                "--imap",
+                "acct",
+                "save",
+                "-f",
+                "INBOX",
+                "-u",
+                "100",
+                "-i",
+                "Billete.pdf",
+                "-o",
+                "/tmp/out.pdf",
+            ]
+        )
+        save_idx = out.index("save")
+        assert out[save_idx + 1 :] == [
+            "-f",
+            "INBOX",
+            "-u",
+            "100",
+            "-i",
+            "Billete.pdf",
+            "-o",
+            "/tmp/out.pdf",
+        ]
+
+    def test_long_imap_after_subcommand_still_hoisted(self):
+        # `--imap` after the subcommand is hoisted to before it so the
+        # group callback sees it (the original purpose of the preprocessor).
+        out = _rewrite_argv(["search", "foo", "--imap", "acct"])
+        assert out.index("--imap") < out.index("search")
+        assert out.index("acct") == out.index("--imap") + 1

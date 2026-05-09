@@ -500,7 +500,7 @@ class TestComposeNonSendIgnoresModeFlags:
 
     def test_default_save_draft_uses_identity_from(self):
         """Drafting still uses the legacy default-resolution path: the
-        first identity on the [imap.NAME] block (--imap/-i) is the From.
+        first identity on the [imap.NAME] block (--imap) is the From.
         """
         cfg = _cfg()
         client = _client()

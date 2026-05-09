@@ -41,10 +41,10 @@ imap = "work"
 address = "you@company.com"
 ```
 
-## Selecting an `[imap.*]` block with `-i`
+## Selecting an `[imap.*]` block with `--imap`
 
 ```bash
-mailroom -i work search "is:unread"
+mailroom --imap work search "is:unread"
 ```
 
 ## One mailbox, several identities
