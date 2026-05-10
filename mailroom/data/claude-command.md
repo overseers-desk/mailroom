@@ -18,9 +18,9 @@ mailroom -A --format json \
 jq '[.[] | .[] | .results[] | {uid, folder, subject, from, date}]' "$RESULTS"
 ```
 
-Pack questions into one invocation: each `search` becomes one outer key in the result, sharing one connection per IMAP block. `search` accepts Gmail-style queries; tokens combine with implicit AND, `OR` clusters alternatives. Results sort newest-first; trailing `-n` peels off as a chain default (default 10) and applies to every `search` that doesn't set its own. Use the words from the user's request (a name they mentioned, a domain, a subject phrase); an AI-constructed address often does not match the real one, which sits in each hit's `from`.
+Pack questions into one invocation: each `search` becomes one outer key in the result, sharing one connection per IMAP block. `search` accepts Gmail-style queries; tokens combine with implicit AND, `OR` clusters alternatives. Results sort newest-first; trailing `-n` peels off as a chain default (default 10) and applies to every `search` that doesn't set its own. Use the words from the user's request (a name they mentioned, a domain, a subject phrase); an AI-constructed address often misses, and a spoken nickname or short form (Tony for Antonio) may not match the form filed in headers. Read a hit to recover the actual surface from `from` or the body, then re-search if needed.
 
-`OR` inside one `search` returns a flat union under that one outer key, so synonyms or trading-name variants of the same entity stay together rather than scatter across separate keys:
+`OR` inside one `search` returns a flat union under that one outer key, so the same entity's different surfaces (name, code, corporate domain, language variants) stay together rather than scatter across separate keys. Surfaces often share no letters; enumerate from what the user knows:
 
 ```bash
 mailroom -A --format json \
