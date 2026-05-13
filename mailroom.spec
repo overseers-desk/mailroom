@@ -1,5 +1,5 @@
 Name:           mailroom
-Version:        1.1.9
+Version:        1.1.10
 Release:        1%{?dist}
 Summary:        Email toolkit for AI assistants and command-line scripting
 License:        MIT
@@ -67,6 +67,28 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
 %{_mandir}/man1/mailroom.1*
 
 %changelog
+* Wed May 13 2026 Weiwu Zhang <a@colourful.land> - 1.1.10-1
+- Local cache now serves `read`, `links`, and `attachments` from disk for
+  any [imap.NAME] with `maildir` configured; previously only `search`
+  consulted the cache and the other paths round-tripped to IMAP
+  unconditionally.
+- The redact policy no longer disables the local cache. Compound queries
+  against a redact-bearing block serve from cache in ~5 s instead of
+  ~16 s, and the maildir path is dropped from redacted records to close
+  that leakage.
+- Warnings from `mailroom.imap_client` are routed through syslog. On
+  systemd hosts the records are queryable via `journalctl -t mailroom`;
+  platforms with no reachable syslog socket fall back to stderr.
+  Closes #39.
+- When `search` falls through to iterating every selectable folder, a
+  WARNING now names the host, the size of the cached folder list, and
+  the universe of LIST attribute flags seen, so intermittent
+  INBOX-only result sets can be attributed from journald without a
+  live reproduction. Refs #38.
+- Documentation: sync-tool examples are no longer co-equal "offlineimap
+  or mbsync"; offlineimap is named as one example of a maildir-producing
+  tool. Fixes #37.
+
 * Sun May 10 2026 Weiwu Zhang <a@colourful.land> - 1.1.9-1
 - `-i` is now `--identity`, used by `compose`, `reply`, and `send-draft`.
   The 1.1.8 assignment of `-i` to `save --identifier` did not match the

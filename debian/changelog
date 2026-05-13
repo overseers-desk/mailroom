@@ -1,3 +1,35 @@
+mailroom (1.1.10) unstable; urgency=medium
+
+  * Local cache now serves `read`, `links`, and `attachments` from
+    disk for any [imap.NAME] with `maildir` configured; previously
+    only `search` consulted the cache and the other paths
+    round-tripped to IMAP unconditionally. Read of a known UID
+    serves from disk in ~0.6 s with zero IMAP traffic.
+  * The redact policy no longer disables the local cache. The
+    eligibility check that bypassed the cache whenever a
+    `redact = "rules.sieve"` field was set is removed; the policy
+    is now applied on the local hits as well, so compound queries
+    against a redact-bearing block serve from cache in ~5 s
+    instead of ~16 s, and the maildir path is dropped from
+    redacted records to close that leakage.
+  * Warnings from `mailroom.imap_client` (search-folder timeouts,
+    connection-verification failures, IMAP logout errors) are
+    routed through syslog. On systemd hosts the records are
+    queryable via `journalctl -t mailroom`; on platforms with no
+    reachable syslog socket the existing stderr handler stays in
+    place. Closes #39.
+  * When `search` falls through to iterating every selectable
+    folder, a WARNING now names the host, the size of the cached
+    folder list, and the universe of LIST attribute flags seen,
+    so the cause behind intermittent INBOX-only result sets can
+    be attributed from journald without a live reproduction.
+    Refs #38.
+  * Documentation: sync-tool examples are no longer co-equal
+    "offlineimap or mbsync"; offlineimap is named as one example
+    of a maildir-producing tool. Fixes #37.
+
+ -- Weiwu Zhang <a@colourful.land>  Wed, 13 May 2026 13:00:00 +0000
+
 mailroom (1.1.9) unstable; urgency=medium
 
   * `-i` is now `--identity`, used by `compose`, `reply`, and
