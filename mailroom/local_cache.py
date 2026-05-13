@@ -6,7 +6,7 @@ search execution; integration into ``ImapClient.search_emails`` and the
 CLI is handled by the caller.
 
 The contract is "a maildir exists and mu indexes it".  This module does
-not invoke ``mu index``; it does not read mbsync or offlineimap state;
+not invoke ``mu index``; it does not read external sync-tool state (e.g. offlineimap's);
 and it does not model any sync stack.  When the configured staleness
 budget is exceeded (or any other check fails), eligibility returns
 ``False`` and the caller is expected to fall back to IMAP.

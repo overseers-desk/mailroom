@@ -8,15 +8,15 @@ This is opt-in. Without a `[local_cache]` block in the config, every `search` go
 
 Three components, each owned by a separate project:
 
-- [offlineimap](https://github.com/OfflineIMAP/offlineimap) (or [mbsync](https://isync.sourceforge.io/)) keeps a maildir on disk in sync with your IMAP server.
+- An IMAP-to-Maildir sync tool (e.g. [offlineimap](https://github.com/OfflineIMAP/offlineimap)) keeps a maildir on disk in sync with your IMAP server.
 - [mu](https://www.djcbsoftware.nl/code/mu/) indexes the maildir into a Xapian database and answers queries.
 - mailroom reads `mu`'s index for `search` when the index is fresh and the query is translatable, otherwise it falls back to IMAP.
 
-Mailroom does not run `offlineimap`, `mbsync`, or `mu index`. The contract is "a maildir exists and `mu` indexes it"; how the maildir gets populated and how often `mu` re-indexes is your decision and runs outside mailroom.
+Mailroom does not run any IMAP-to-Maildir syncer (e.g. `offlineimap`), nor `mu index`. The contract is "a maildir exists and `mu` indexes it"; how the maildir gets populated and how often `mu` re-indexes is your decision and runs outside mailroom.
 
 ## Prerequisites
 
-Install offlineimap (or mbsync) and mu through your package manager, and set up syncing and indexing per their upstream documentation:
+Install an IMAP-to-Maildir syncer (e.g. offlineimap) and mu through your package manager, and set up syncing and indexing per their upstream documentation:
 
 - offlineimap: https://github.com/OfflineIMAP/offlineimap (configuration in `~/.offlineimaprc`)
 - mu: https://www.djcbsoftware.nl/code/mu/ (`mu init --maildir=/path/to/maildir`, then `mu index`)
