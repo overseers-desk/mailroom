@@ -1,6 +1,7 @@
 """Tests for the IMAP client."""
 
 from dataclasses import replace
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,6 +11,51 @@ from mailroom.imap_client import ImapClient
 from mailroom.local_cache import EligibilityResult, MuFailure
 from mailroom.models import Email
 from mailroom.query_parser import UntranslatableQuery
+
+
+def _make_maildir_root(tmp_path, folder: str = "INBOX") -> str:
+    """Create ``<tmp>/<folder>/{cur,new}`` and return the block-root path."""
+    root = tmp_path / "maildir"
+    (root / folder / "cur").mkdir(parents=True)
+    (root / folder / "new").mkdir(parents=True)
+    return str(root)
+
+
+def _write_maildir_message(
+    maildir_root: str,
+    folder: str,
+    uid: int,
+    *,
+    subdir: str = "cur",
+    from_addr: str = "alice@example.com",
+    subject: str = "Test Disk Email",
+    flag_suffix: str = "S",
+) -> str:
+    """Write an RFC 822 message at the mbsync-style filename; return path."""
+    name = f"1700000000_0.hostname,U={uid},FMD5=abc:2,{flag_suffix}"
+    path = Path(maildir_root) / folder / subdir / name
+    path.write_bytes(
+        f"From: {from_addr}\r\n"
+        f"To: bob@example.com\r\n"
+        f"Subject: {subject}\r\n"
+        f"Date: Thu, 01 Jan 2023 12:00:00 +0000\r\n"
+        f"Message-ID: <disk-{uid}@example.com>\r\n"
+        f"\r\n"
+        f"disk body\r\n".encode("utf-8")
+    )
+    return str(path)
+
+
+def _make_block_with_maildir(maildir: str, redact_policy=None) -> ImapBlock:
+    return ImapBlock(
+        host="imap.example.com",
+        port=993,
+        username="test@example.com",
+        password="password",
+        use_ssl=True,
+        maildir=maildir,
+        redact_policy=redact_policy,
+    )
 
 
 class TestImapClient:
@@ -699,6 +745,133 @@ class TestImapClient:
             assert len(emails) == 2
             assert 101 in emails
             assert 102 in emails
+
+    def test_fetch_email_disk_hit_skips_imap(self, tmp_path):
+        """When ``block.maildir`` is set and the file exists, the disk
+        path serves the fetch and the IMAP client is never touched."""
+        root = _make_maildir_root(tmp_path)
+        _write_maildir_message(root, "INBOX", uid=691, subject="From disk")
+        client = ImapClient(_make_block_with_maildir(root))
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_imap = MagicMock()
+            mock_cls.return_value = mock_imap
+            email_obj = client.fetch_email(691, folder="INBOX")
+
+        assert email_obj is not None
+        assert email_obj.uid == 691
+        assert email_obj.folder == "INBOX"
+        assert email_obj.subject == "From disk"
+        assert email_obj.from_.address == "alice@example.com"
+        mock_imap.fetch.assert_not_called()
+        mock_imap.select_folder.assert_not_called()
+
+    def test_fetch_email_disk_hit_finds_message_in_new_subdir(self, tmp_path):
+        """``new/`` is searched alongside ``cur/`` so just-delivered mail
+        is still disk-served."""
+        root = _make_maildir_root(tmp_path)
+        _write_maildir_message(
+            root, "INBOX", uid=42, subdir="new", subject="Fresh", flag_suffix=""
+        )
+        client = ImapClient(_make_block_with_maildir(root))
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_imap = MagicMock()
+            mock_cls.return_value = mock_imap
+            email_obj = client.fetch_email(42, folder="INBOX")
+
+        assert email_obj is not None
+        assert email_obj.uid == 42
+        mock_imap.fetch.assert_not_called()
+
+    def test_fetch_email_disk_miss_falls_back_to_imap(
+        self, tmp_path, mock_imap_client, test_email_response_data
+    ):
+        """No matching file on disk → IMAP fallback (e.g. mail newer than
+        the last mbsync sync)."""
+        root = _make_maildir_root(tmp_path)
+        # No file written for uid 12345.
+        client = ImapClient(_make_block_with_maildir(root))
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_cls.return_value = mock_imap_client
+            mock_imap_client.select_folder.return_value = {b"EXISTS": 10}
+            mock_imap_client.fetch.return_value = {12345: test_email_response_data}
+            client.connect()
+            email_obj = client.fetch_email(12345, folder="INBOX")
+
+        assert email_obj is not None
+        assert email_obj.uid == 12345
+        mock_imap_client.fetch.assert_called_once_with(
+            [12345], ["BODY.PEEK[]", "FLAGS"]
+        )
+
+    def test_fetch_email_no_maildir_uses_imap(
+        self, mock_imap_client, test_email_response_data
+    ):
+        """A block without ``maildir`` skips the disk path entirely."""
+        block = ImapBlock(
+            host="imap.example.com",
+            port=993,
+            username="test@example.com",
+            password="password",
+            use_ssl=True,
+            maildir=None,
+        )
+        client = ImapClient(block)
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_cls.return_value = mock_imap_client
+            mock_imap_client.select_folder.return_value = {b"EXISTS": 10}
+            mock_imap_client.fetch.return_value = {12345: test_email_response_data}
+            client.connect()
+            email_obj = client.fetch_email(12345, folder="INBOX")
+
+        assert email_obj is not None
+        assert email_obj.uid == 12345
+        mock_imap_client.fetch.assert_called_once()
+
+    def test_fetch_emails_serves_each_uid_from_disk(self, tmp_path):
+        """``fetch_emails`` resolves each UID via the disk path when files
+        exist; zero IMAP traffic."""
+        root = _make_maildir_root(tmp_path)
+        _write_maildir_message(root, "INBOX", uid=1, subject="one")
+        _write_maildir_message(root, "INBOX", uid=2, subject="two")
+        client = ImapClient(_make_block_with_maildir(root))
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_imap = MagicMock()
+            mock_cls.return_value = mock_imap
+            emails = client.fetch_emails([1, 2], folder="INBOX")
+
+        assert set(emails.keys()) == {1, 2}
+        assert emails[1].subject == "one"
+        assert emails[2].subject == "two"
+        mock_imap.fetch.assert_not_called()
+
+    def test_fetch_emails_mixes_disk_and_imap_on_partial_miss(
+        self, tmp_path, mock_imap_client, make_test_email_response_data
+    ):
+        """When some UIDs hit disk and others miss, the misses fall back
+        to IMAP; the merged result is keyed by UID."""
+        root = _make_maildir_root(tmp_path)
+        _write_maildir_message(root, "INBOX", uid=1, subject="from disk")
+        client = ImapClient(_make_block_with_maildir(root))
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_cls.return_value = mock_imap_client
+            mock_imap_client.select_folder.return_value = {b"EXISTS": 10}
+            mock_imap_client.fetch.return_value = {
+                2: make_test_email_response_data(uid=2)
+            }
+            client.connect()
+            emails = client.fetch_emails([1, 2], folder="INBOX")
+
+        assert set(emails.keys()) == {1, 2}
+        assert emails[1].subject == "from disk"
+        fetched_uids = mock_imap_client.fetch.call_args.args[0]
+        assert 2 in fetched_uids
+        assert 1 not in fetched_uids
 
     def test_mark_email(self, mock_imap_client):
         """Test marking an email with a flag."""
@@ -1733,6 +1906,25 @@ class TestRedactOnFetch:
         assert emails[2].redacted_by == "redacted"
         assert emails[2].from_.address == "[redacted]"
         assert emails[3].redacted_by is None
+
+    def test_fetch_email_disk_hit_applies_redact(self, tmp_path):
+        """A redact policy that fires on disk-served mail still redacts —
+        the policy is callable-on-Email and indifferent to source."""
+        root = _make_maildir_root(tmp_path)
+        _write_maildir_message(root, "INBOX", uid=7, subject="confidential")
+        block = _make_block_with_maildir(root, redact_policy=lambda e: True)
+        client = ImapClient(block)
+
+        with patch("imapclient.IMAPClient") as mock_cls:
+            mock_imap = MagicMock()
+            mock_cls.return_value = mock_imap
+            email_obj = client.fetch_email(7, folder="INBOX")
+
+        assert email_obj is not None
+        assert email_obj.redacted_by == "redacted"
+        assert email_obj.from_.address == "[redacted]"
+        assert email_obj.uid == 7
+        mock_imap.fetch.assert_not_called()
 
     def test_fetch_raw_returns_blank_bytes_for_redacted(self, mock_imap_client):
         """``fetch_raw`` blanks the bytes and tags the dict for redacted UIDs."""

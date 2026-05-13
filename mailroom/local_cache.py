@@ -12,6 +12,7 @@ budget is exceeded (or any other check fails), eligibility returns
 ``False`` and the caller is expected to fall back to IMAP.
 """
 
+import email as email_pkg
 import json
 import logging
 import os
@@ -23,7 +24,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .config import ImapBlock, LocalCacheConfig
+from .models import Email
 from .query_parser import UntranslatableQuery, parse_query_to_mu
+
+_UID_FROM_FILENAME = re.compile(r",U=(\d+)[,:]")
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +51,9 @@ class EligibilityResult:
         reason: When ``eligible`` is ``False``, a short tag matching the
             ``provenance.fell_back_reason`` vocabulary used in search
             responses (``"mu_missing"``, ``"db_missing"``, ``"stale"``).
+            A block carrying a redact policy stays eligible: the policy
+            is applied against the on-disk maildir file at format time,
+            not by forcing an IMAP round-trip.
     """
 
     eligible: bool
@@ -139,15 +146,6 @@ class MuBackend:
             ``EligibilityResult(eligible=False, reason="…")`` with a
             tag from the ``provenance.fell_back_reason`` vocabulary.
         """
-        # When the block carries a redact policy, every search must
-        # round-trip through IMAP fetch so the policy can evaluate
-        # against full header data; the mu record only carries
-        # from/to/subject and would silently miss a match on cc/bcc or
-        # any other header. Disabling the cache here keeps the
-        # redaction guarantee single-sourced through the IMAP fetch
-        # pipeline.
-        if imap_block.redact_policy is not None:
-            return EligibilityResult(False, "redact_policy_active")
         if shutil.which("mu") is None:
             return EligibilityResult(False, "mu_missing")
         xapian = self._xapian_dir()
@@ -266,12 +264,28 @@ class MuBackend:
     def _format_result(
         self, imap_block: ImapBlock, rec: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Translate a single mu json record into mailroom result shape."""
+        """Translate a single mu json record into mailroom result shape.
+
+        UID is parsed from the mbsync-style ``,U=N,`` segment of the
+        filename when present so search→read piping works uniformly with
+        IMAP-served hits; records from non-mbsync layouts omit the
+        ``uid`` key.
+
+        When ``imap_block.redact_policy`` is set the on-disk maildir
+        file at ``:path`` is read and parsed and the policy is evaluated
+        against the resulting :class:`Email`.  Matching records get the
+        redacted shape (blank from/to/subject, ``redacted_by`` set, no
+        ``path``); non-matching records pass through untouched.  When
+        no policy is set the file is not opened.
+        """
         flags = rec.get(":flags") or []
-        return {
+        path = rec.get(":path", "")
+        folder = self._derive_folder(imap_block.maildir, rec.get(":maildir"))
+
+        base: Dict[str, Any] = {
             "message_id": rec.get(":message-id", ""),
-            "path": rec.get(":path", ""),
-            "folder": self._derive_folder(imap_block.maildir, rec.get(":maildir")),
+            "path": path,
+            "folder": folder,
             "from": self._format_address_first(rec.get(":from")),
             "to": self._format_address_list(rec.get(":to")),
             "subject": rec.get(":subject", ""),
@@ -279,6 +293,55 @@ class MuBackend:
             "flags": list(flags),
             "has_attachments": "attach" in flags,
         }
+
+        uid = self._parse_uid_from_path(path)
+        if uid is not None:
+            base["uid"] = uid
+
+        if imap_block.redact_policy is None:
+            return base
+
+        try:
+            with open(path, "rb") as fh:
+                raw = fh.read()
+        except OSError as e:
+            raise MuFailure(f"could not read maildir file {path!r}: {e}") from e
+        message = email_pkg.message_from_bytes(raw)
+        email_obj = Email.from_message(message, uid=uid, folder=folder)
+        email_obj.flags = list(flags)
+        if not imap_block.redact_policy(email_obj):
+            return base
+
+        redacted = email_obj.redact("redacted")
+        return {
+            "message_id": base["message_id"],
+            "uid": uid,
+            "folder": folder,
+            "from": str(redacted.from_),
+            "to": [str(t) for t in redacted.to],
+            "subject": redacted.subject,
+            "date": base["date"],
+            "flags": list(flags),
+            "has_attachments": False,
+            "redacted_by": redacted.redacted_by,
+        }
+
+    @staticmethod
+    def _parse_uid_from_path(path: str) -> Optional[int]:
+        """Extract the IMAP UID from an mbsync-style maildir filename.
+
+        Returns ``None`` when the filename does not carry the
+        ``,U=N,`` segment (non-mbsync layouts).
+        """
+        if not path:
+            return None
+        match = _UID_FROM_FILENAME.search(path)
+        if not match:
+            return None
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return None
 
     @staticmethod
     def _format_address_first(value: Any) -> str:

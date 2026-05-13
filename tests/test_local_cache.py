@@ -100,6 +100,31 @@ class TestMuBackendIsEligible:
         assert result.eligible is True
         assert result.reason is None
 
+    def test_redact_policy_block_remains_eligible(self, tmp_path, monkeypatch):
+        """A block with a redact policy stays cache-eligible; the policy
+        is applied against the on-disk maildir file at search time, not
+        by forcing an IMAP round-trip."""
+        muhome = _make_xapian_dir(tmp_path)
+        cfg = LocalCacheConfig(mu_index=muhome, max_staleness_seconds=86400)
+        backend = MuBackend(cfg)
+        monkeypatch.setattr(
+            "mailroom.local_cache.shutil.which", lambda _: "/usr/bin/mu"
+        )
+        block = ImapBlock(
+            host="imap.example.com",
+            port=993,
+            username="user@example.com",
+            password="password",
+            use_ssl=True,
+            maildir="/var/local/mail/work",
+            redact_policy=lambda email_obj: True,
+        )
+
+        result = backend.is_eligible(block)
+
+        assert result.eligible is True
+        assert result.reason is None
+
 
 class TestMuBackendSearch:
     """search() invokes mu, parses output, and surfaces failures."""
@@ -264,3 +289,203 @@ class TestMuBackendSearch:
 
         with pytest.raises(ValueError, match="maildir"):
             backend.search(block, "from:alice", limit=10)
+
+    def test_search_surfaces_uid_from_filename(self, tmp_path):
+        """When the maildir filename embeds ``,U=N,`` (mbsync convention)
+        the result carries ``uid: N`` as an int so search→read piping
+        works uniformly with IMAP-served hits."""
+        backend = self._backend(tmp_path)
+        block = _make_block("/var/local/mail/work")
+        sample = [
+            {
+                ":path": (
+                    "/var/local/mail/work/INBOX/cur/"
+                    "1775099737_0.37144.yoga,U=691,FMD5=abc:2,S"
+                ),
+                ":from": [{":email": "a@b.com"}],
+                ":to": [],
+                ":subject": "Hi",
+                ":date-unix": 1700000000,
+                ":flags": ["seen"],
+                ":message-id": "<m@x>",
+                ":maildir": "/work",
+            }
+        ]
+        with patch(
+            "mailroom.local_cache.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=json.dumps(sample), stderr=""
+            ),
+        ):
+            results = backend.search(block, "from:alice", limit=5)
+
+        assert len(results) == 1
+        assert results[0]["uid"] == 691
+        assert isinstance(results[0]["uid"], int)
+
+    def test_search_omits_uid_when_filename_lacks_U_field(self, tmp_path):
+        """A non-mbsync filename (no ``,U=N,``) yields a result without a
+        ``uid`` key; the rest of the shape is unaffected."""
+        backend = self._backend(tmp_path)
+        block = _make_block("/var/local/mail/work")
+        sample = [
+            {
+                ":path": "/var/local/mail/work/INBOX/cur/12345.mbox",
+                ":from": [{":email": "a@b.com"}],
+                ":to": [],
+                ":subject": "Hi",
+                ":date-unix": 1700000000,
+                ":flags": ["seen"],
+                ":message-id": "<m@x>",
+                ":maildir": "/work",
+            }
+        ]
+        with patch(
+            "mailroom.local_cache.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=json.dumps(sample), stderr=""
+            ),
+        ):
+            results = backend.search(block, "from:alice", limit=5)
+
+        assert len(results) == 1
+        assert "uid" not in results[0]
+        assert results[0]["message_id"] == "<m@x>"
+
+    def test_search_skips_file_read_when_no_policy(self, tmp_path):
+        """Fast-path discipline: when the block has no redact policy the
+        backend never opens the maildir file. The path may be entirely
+        fictitious; if the code attempted to read it the test would
+        raise."""
+        backend = self._backend(tmp_path)
+        block = _make_block("/var/local/mail/work")
+        # The path is intentionally non-existent; reading it would raise.
+        sample = [
+            {
+                ":path": "/nonexistent/path/that/does/not/exist,U=1,FMD5=x:2,S",
+                ":from": [{":email": "a@b.com"}],
+                ":to": [],
+                ":subject": "Hi",
+                ":date-unix": 1700000000,
+                ":flags": [],
+                ":message-id": "<m@x>",
+                ":maildir": "/work",
+            }
+        ]
+        with patch(
+            "mailroom.local_cache.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=json.dumps(sample), stderr=""
+            ),
+        ):
+            results = backend.search(block, "from:alice", limit=5)
+
+        assert len(results) == 1
+        assert results[0]["subject"] == "Hi"
+        assert "redacted_by" not in results[0]
+
+    def test_search_applies_redact_to_matching_hit(self, tmp_path):
+        """When the block carries a redact policy that matches, the
+        result carries ``redacted_by="redacted"``, blanked content
+        fields, and no ``path`` (closing the maildir-path leakage on
+        redacted records)."""
+        backend = self._backend(tmp_path)
+        # Real RFC 822 message on disk so the policy can be applied.
+        maildir_file = tmp_path / "msg,U=42,FMD5=abc:2,S"
+        maildir_file.write_bytes(
+            b"From: alice@example.com\r\n"
+            b"To: bob@example.com\r\n"
+            b"Cc: carol@example.com\r\n"
+            b"Subject: confidential\r\n"
+            b"Date: Thu, 01 Jan 2023 12:00:00 +0000\r\n"
+            b"Message-ID: <m@x>\r\n"
+            b"\r\n"
+            b"secret body\r\n"
+        )
+        block = ImapBlock(
+            host="imap.example.com",
+            port=993,
+            username="user@example.com",
+            password="password",
+            use_ssl=True,
+            maildir="/var/local/mail/work",
+            redact_policy=lambda email_obj: True,
+        )
+        sample = [
+            {
+                ":path": str(maildir_file),
+                ":from": [{":email": "alice@example.com"}],
+                ":to": [{":email": "bob@example.com"}],
+                ":subject": "confidential",
+                ":date-unix": 1672574400,
+                ":flags": ["seen"],
+                ":message-id": "<m@x>",
+                ":maildir": "/work",
+            }
+        ]
+        with patch(
+            "mailroom.local_cache.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=json.dumps(sample), stderr=""
+            ),
+        ):
+            results = backend.search(block, "from:alice", limit=5)
+
+        assert len(results) == 1
+        rec = results[0]
+        assert rec["redacted_by"] == "redacted"
+        assert rec["from"] == "[redacted]"
+        assert rec["to"] == []
+        assert rec["subject"].startswith("[redacted")
+        assert rec["has_attachments"] is False
+        assert "path" not in rec
+        assert rec["uid"] == 42
+        assert rec["message_id"] == "<m@x>"
+
+    def test_search_passthrough_when_policy_does_not_match(self, tmp_path):
+        """A policy that returns False yields the normal record shape,
+        unredacted, even though the file was read."""
+        backend = self._backend(tmp_path)
+        maildir_file = tmp_path / "msg,U=43,FMD5=abc:2,S"
+        maildir_file.write_bytes(
+            b"From: alice@example.com\r\n"
+            b"Subject: keep me\r\n"
+            b"Message-ID: <n@x>\r\n"
+            b"\r\n"
+            b"body\r\n"
+        )
+        block = ImapBlock(
+            host="imap.example.com",
+            port=993,
+            username="user@example.com",
+            password="password",
+            use_ssl=True,
+            maildir="/var/local/mail/work",
+            redact_policy=lambda email_obj: False,
+        )
+        sample = [
+            {
+                ":path": str(maildir_file),
+                ":from": [{":email": "alice@example.com"}],
+                ":to": [],
+                ":subject": "keep me",
+                ":date-unix": 1700000000,
+                ":flags": [],
+                ":message-id": "<n@x>",
+                ":maildir": "/work",
+            }
+        ]
+        with patch(
+            "mailroom.local_cache.subprocess.run",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=json.dumps(sample), stderr=""
+            ),
+        ):
+            results = backend.search(block, "from:alice", limit=5)
+
+        assert len(results) == 1
+        rec = results[0]
+        assert "redacted_by" not in rec
+        assert rec["subject"] == "keep me"
+        assert rec["path"] == str(maildir_file)
+        assert rec["uid"] == 43

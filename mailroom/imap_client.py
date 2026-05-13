@@ -1,7 +1,9 @@
 """IMAP client implementation."""
 
 import email
+import glob
 import logging
+import os
 import re
 import shlex
 from datetime import datetime, timedelta
@@ -16,6 +18,18 @@ from mailroom.query_parser import parse_query
 
 if TYPE_CHECKING:
     from mailroom.local_cache import MuBackend
+
+
+# mbsync encodes flags in the maildir filename suffix after ``:2,``.
+# Map each letter to its RFC 3501 IMAP flag so disk-served Email objects
+# carry the same ``flags`` list as IMAP-served ones.
+_MAILDIR_FLAG_CHARS = {
+    "S": "\\Seen",
+    "R": "\\Answered",
+    "T": "\\Deleted",
+    "D": "\\Draft",
+    "F": "\\Flagged",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -411,6 +425,13 @@ class ImapClient:
     def fetch_email(self, uid: int, folder: str = "INBOX") -> Optional[Email]:
         """Fetch a single email by UID.
 
+        When the block carries a ``maildir`` configuration the call is
+        served from the local mbsync-synced file at
+        ``<maildir>/<folder>/{cur,new}/*,U=<uid>,*`` and IMAP is not
+        contacted; on disk miss (file not yet synced) the call falls
+        back to IMAP.  Redact policy is applied to the resulting
+        ``Email`` regardless of source.
+
         Args:
             uid: Email UID
             folder: Folder to fetch from
@@ -426,6 +447,11 @@ class ImapClient:
         Raises:
             ConnectionError: If not connected and connection fails
         """
+        if self.block.maildir:
+            disk_email = self._fetch_email_disk(uid, folder)
+            if disk_email is not None:
+                return self._apply_redact(disk_email)
+
         self.ensure_connected()
         self.select_folder(folder, readonly=True)
 
@@ -453,6 +479,58 @@ class ImapClient:
         self._update_activity()
         return self._apply_redact(email_obj)
 
+    def _fetch_email_disk(self, uid: int, folder: str) -> Optional[Email]:
+        """Read a message from the mbsync-synced maildir, if present.
+
+        Searches ``<block.maildir>/<folder>/{cur,new}/`` for a file
+        whose name encodes the IMAP UID via the mbsync ``,U=<uid>,``
+        segment.  Returns ``None`` when the file is absent (the caller
+        falls back to IMAP).
+
+        Args:
+            uid: IMAP UID to resolve.
+            folder: IMAP folder, used as the maildir subdirectory name.
+
+        Returns:
+            An :class:`Email` built from the on-disk bytes, with
+            ``flags`` derived from the maildir suffix; ``None`` when no
+            matching file is found.
+        """
+        if not self.block.maildir:
+            return None
+        for subdir in ("cur", "new"):
+            pattern = os.path.join(self.block.maildir, folder, subdir, f"*,U={uid},*")
+            matches = glob.glob(pattern)
+            if not matches:
+                continue
+            path = matches[0]
+            try:
+                with open(path, "rb") as fh:
+                    raw = fh.read()
+            except OSError as e:
+                logger.warning(
+                    f"Could not read maildir file {path!r}: {e}; falling back to IMAP"
+                )
+                return None
+            message = email.message_from_bytes(raw)
+            email_obj = Email.from_message(message, uid=uid, folder=folder)
+            email_obj.flags = self._parse_maildir_flags(path)
+            return email_obj
+        return None
+
+    @staticmethod
+    def _parse_maildir_flags(path: str) -> List[str]:
+        """Decode the ``:2,XYZ`` flag suffix of a maildir filename."""
+        name = os.path.basename(path)
+        marker = name.find(":2,")
+        if marker == -1:
+            return []
+        return [
+            _MAILDIR_FLAG_CHARS[ch]
+            for ch in name[marker + 3 :]
+            if ch in _MAILDIR_FLAG_CHARS
+        ]
+
     def _apply_redact(self, email_obj: Email) -> Email:
         """Run the per-block redact policy and replace if matched."""
         policy = self.block.redact_policy
@@ -468,6 +546,10 @@ class ImapClient:
     ) -> Dict[int, Email]:
         """Fetch multiple emails by UIDs.
 
+        When the block carries a ``maildir`` configuration each UID is
+        resolved from the local mbsync-synced file first; UIDs whose
+        file is not yet on disk are fetched in a single IMAP batch.
+
         Args:
             uids: List of email UIDs
             folder: Folder to fetch from
@@ -479,36 +561,39 @@ class ImapClient:
         Raises:
             ConnectionError: If not connected and connection fails
         """
-        self.ensure_connected()
-        self.select_folder(folder, readonly=True)
-
-        # Apply limit if specified
         if limit is not None and limit > 0:
             uids = uids[:limit]
-
-        # Fetch message data
         if not uids:
             return {}
 
-        # Use BODY.PEEK[] to get full message including all parts and headers
-        result = self._client_or_raise().fetch(uids, ["BODY.PEEK[]", "FLAGS"])
+        emails: Dict[int, Email] = {}
+        missing: List[int] = []
+        if self.block.maildir:
+            for uid in uids:
+                disk_email = self._fetch_email_disk(uid, folder)
+                if disk_email is not None:
+                    emails[uid] = self._apply_redact(disk_email)
+                else:
+                    missing.append(uid)
+        else:
+            missing = list(uids)
 
-        # Parse emails
-        emails = {}
+        if not missing:
+            return emails
+
+        self.ensure_connected()
+        self.select_folder(folder, readonly=True)
+        result = self._client_or_raise().fetch(missing, ["BODY.PEEK[]", "FLAGS"])
+
         for uid, message_data in result.items():
             raw_message = message_data[b"BODY[]"]
             flags = message_data[b"FLAGS"]
-
-            # Convert flags to strings
             str_flags = [
                 f.decode("utf-8") if isinstance(f, bytes) else f for f in flags
             ]
-
-            # Parse email
             message = email.message_from_bytes(raw_message)
             email_obj = Email.from_message(message, uid=uid, folder=folder)
             email_obj.flags = str_flags
-
             emails[uid] = self._apply_redact(email_obj)
 
         self._update_activity()
