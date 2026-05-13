@@ -1322,10 +1322,37 @@ class ImapClient:
             folders_to_search = [folder]
         else:
             # Prefer the SPECIAL-USE \All folder when the server advertises one
-            # (Gmail's [Gmail]/All Mail, Fastmail's Archive, etc.) — one SELECT
+            # (Gmail's [Gmail]/All Mail, Fastmail's Archive, etc.): one SELECT
             # instead of iterating every folder. Falls back to all selectable.
             all_mail = self.find_special_use_folder(b"\\All")
-            folders_to_search = [all_mail] if all_mail else self.list_folders()
+            if all_mail:
+                folders_to_search = [all_mail]
+            else:
+                # Diagnostic for issue #38: record why the SPECIAL-USE
+                # optimization did not fire so the cause can be attributed
+                # from journald without needing a live reproduction. The
+                # flag universe across the cached LIST response tells us
+                # whether the server returned SPECIAL-USE attributes at
+                # all, or only on folders we are not interested in.
+                flags_seen = sorted(
+                    {
+                        (
+                            f.decode("ascii", "replace")
+                            if isinstance(f, bytes)
+                            else str(f)
+                        )
+                        for flags in self.folder_cache.values()
+                        for f in flags
+                    }
+                )
+                logger.warning(
+                    "iterate-all fallback for search: SPECIAL-USE \\All not "
+                    "detected (host=%s, cached_folders=%d, flags_seen=%s)",
+                    self.block.host,
+                    len(self.folder_cache),
+                    flags_seen,
+                )
+                folders_to_search = self.list_folders()
 
         # Pass 1: collect (uid, folder, date) using a lightweight fetch
         candidates: List[tuple] = []
