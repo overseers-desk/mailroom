@@ -97,6 +97,43 @@ class TestModels(unittest.TestCase):
         self.assertIn("From: John Doe <john@example.com>", summary)
         self.assertIn("Subject: Test Email", summary)
 
+    def test_email_from_message_parses_reply_to(self):
+        """Reply-To header is parsed into Email.reply_to.
+
+        Forwarders (Google Groups, alias services) rewrite From and
+        preserve the original sender in Reply-To. The model must
+        surface Reply-To so the reply path can route to the original
+        correspondent rather than back through the forwarder.
+        """
+        msg = MIMEText("body")
+        msg["From"] = "List Forwarder <list@group.example>"
+        msg["To"] = "Me <me@example.com>"
+        msg["Reply-To"] = (
+            "Original Sender <original@vendor.example>, second@vendor.example"
+        )
+        msg["Subject"] = "fwd"
+        msg["Message-ID"] = "<fwd@example.com>"
+
+        email_obj = Email.from_message(msg)
+
+        self.assertEqual(len(email_obj.reply_to), 2)
+        self.assertEqual(
+            str(email_obj.reply_to[0]), "Original Sender <original@vendor.example>"
+        )
+        self.assertEqual(str(email_obj.reply_to[1]), "second@vendor.example")
+
+    def test_email_from_message_reply_to_absent(self):
+        """Email.reply_to is an empty list when the header is absent."""
+        msg = MIMEText("body")
+        msg["From"] = "Sender <sender@example.com>"
+        msg["To"] = "Me <me@example.com>"
+        msg["Subject"] = "plain"
+        msg["Message-ID"] = "<plain@example.com>"
+
+        email_obj = Email.from_message(msg)
+
+        self.assertEqual(email_obj.reply_to, [])
+
 
 if __name__ == "__main__":
     unittest.main()

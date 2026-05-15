@@ -56,6 +56,69 @@ class TestCreateReplyMime:
         assert "This is a reply." in payload
         assert "Original message content" in payload
 
+    def test_reply_honours_reply_to_over_from(self):
+        """When Reply-To is set on the parent, the reply's To uses it.
+
+        Forwarder scenarios (Google Groups, alias services) rewrite
+        From to the list address and preserve the original sender in
+        Reply-To; replying to From would loop back into the user's
+        own mailbox rather than reach the original correspondent.
+        """
+        parent = Email(
+            message_id="<forwarded@example.com>",
+            subject="Test",
+            from_=EmailAddress(name="List Forwarder", address="list@group.example"),
+            to=[EmailAddress(name="Me", address="me@example.com")],
+            reply_to=[
+                EmailAddress(name="Original Sender", address="original@vendor.example")
+            ],
+            date=datetime.now(),
+            content=EmailContent(text="hello", html=""),
+        )
+        from_addr = EmailAddress(name="Me", address="me@example.com")
+
+        mime_message = create_mime(
+            original_email=parent, from_addr=from_addr, body="thanks"
+        )
+
+        assert mime_message["To"] == "Original Sender <original@vendor.example>"
+        assert "list@group.example" not in (mime_message["To"] or "")
+
+    def test_reply_all_with_reply_to_puts_from_in_cc(self):
+        """Reply-all with Reply-To: To=Reply-To, original From moves to Cc."""
+        parent = Email(
+            message_id="<forwarded2@example.com>",
+            subject="Test",
+            from_=EmailAddress(name="List Forwarder", address="list@group.example"),
+            to=[
+                EmailAddress(name="Me", address="me@example.com"),
+                EmailAddress(name="Other", address="other@example.com"),
+            ],
+            cc=[EmailAddress(name="CC One", address="cc1@example.com")],
+            reply_to=[
+                EmailAddress(name="Original Sender", address="original@vendor.example")
+            ],
+            date=datetime.now(),
+            content=EmailContent(text="hello", html=""),
+        )
+        from_addr = EmailAddress(name="Me", address="me@example.com")
+
+        mime_message = create_mime(
+            original_email=parent,
+            from_addr=from_addr,
+            body="thanks all",
+            reply_all=True,
+        )
+
+        # To = Reply-To + parent.To minus us
+        assert mime_message["To"] == (
+            "Original Sender <original@vendor.example>, Other <other@example.com>"
+        )
+        # Cc = parent.Cc minus us + original From (diverted by Reply-To)
+        assert mime_message["Cc"] == (
+            "CC One <cc1@example.com>, List Forwarder <list@group.example>"
+        )
+
     def test_create_reply_all(self, sample_email: Email):
         """Test creating a reply-all."""
         reply_to = EmailAddress(name="Reply To", address="sender@example.com")

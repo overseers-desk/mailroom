@@ -194,6 +194,7 @@ class Email:
     to: List[EmailAddress]
     cc: List[EmailAddress] = field(default_factory=list)
     bcc: List[EmailAddress] = field(default_factory=list)
+    reply_to: List[EmailAddress] = field(default_factory=list)
     date: Optional[datetime] = None
     content: EmailContent = field(default_factory=EmailContent)
     attachments: List[EmailAttachment] = field(default_factory=list)
@@ -238,6 +239,7 @@ class Email:
             to=[],
             cc=[],
             bcc=[],
+            reply_to=[],
             date=self.date,
             content=EmailContent(text=placeholder_label, html=""),
             attachments=[],
@@ -311,6 +313,7 @@ class Email:
         to_str = decode_mime_header(message.get("To", ""))
         cc_str = decode_mime_header(message.get("Cc", ""))
         bcc_str = decode_mime_header(message.get("Bcc", ""))
+        reply_to_str = decode_mime_header(message.get("Reply-To", ""))
         date_str = message.get("Date")
         message_id = message.get("Message-ID", "")
         if message_id:
@@ -342,6 +345,11 @@ class Email:
         bcc = [
             EmailAddress.parse(addr.strip())
             for addr in bcc_str.split(",")
+            if addr.strip()
+        ]
+        reply_to = [
+            EmailAddress.parse(addr.strip())
+            for addr in reply_to_str.split(",")
             if addr.strip()
         ]
 
@@ -451,6 +459,7 @@ class Email:
             to=to,
             cc=cc,
             bcc=bcc,
+            reply_to=reply_to,
             date=date,
             content=content,
             attachments=attachments,

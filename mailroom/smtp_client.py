@@ -111,8 +111,12 @@ def create_mime(
     given *to* / *subject* / *body*. When it is provided the function produces
     a reply: threading headers (``In-Reply-To``, ``References``) are added, the
     subject is prefixed with ``"Re: "`` if needed, and the original body is
-    quoted under an attribution line. *reply_all* extends recipients to include
-    the original To/Cc (minus the sender).
+    quoted under an attribution line. The primary recipient list follows
+    RFC 5322 §3.6.2: the parent's ``Reply-To`` is used when present, otherwise
+    the parent's ``From``. *reply_all* extends recipients to include the
+    original To/Cc (minus the sender); when ``Reply-To`` diverts the primary
+    list, the original ``From`` is added to Cc so the original sender still
+    sees the reply-all.
 
     Args:
         from_addr: Address that appears in the ``From`` header.
@@ -163,7 +167,10 @@ def create_mime(
 
     if is_reply:
         assert original_email is not None  # for type checkers
-        to_recipients = [original_email.from_]
+        if original_email.reply_to:
+            to_recipients = list(original_email.reply_to)
+        else:
+            to_recipients = [original_email.from_]
         if reply_all and original_email.to:
             to_recipients.extend(
                 recipient
@@ -179,12 +186,23 @@ def create_mime(
     cc_recipients: List[EmailAddress] = []
     if cc:
         cc_recipients.extend(cc)
-    elif is_reply and reply_all and original_email and original_email.cc:
-        cc_recipients.extend(
-            recipient
-            for recipient in original_email.cc
-            if recipient.address != from_addr.address
-        )
+    elif is_reply and reply_all and original_email:
+        if original_email.cc:
+            cc_recipients.extend(
+                recipient
+                for recipient in original_email.cc
+                if recipient.address != from_addr.address
+            )
+        # When Reply-To diverts the primary recipients, the original
+        # sender is no longer in To. Include them in Cc so the original
+        # sender still sees the reply-all.
+        if original_email.reply_to:
+            reply_to_addrs = {a.address for a in original_email.reply_to}
+            if (
+                original_email.from_.address not in reply_to_addrs
+                and original_email.from_.address != from_addr.address
+            ):
+                cc_recipients.append(original_email.from_)
     if cc_recipients:
         msg["Cc"] = ", ".join(str(recipient) for recipient in cc_recipients)
 
