@@ -1,5 +1,5 @@
 Name:           mailroom
-Version:        1.1.10
+Version:        1.1.11
 Release:        1%{?dist}
 Summary:        Email toolkit for AI assistants and command-line scripting
 License:        MIT
@@ -67,6 +67,18 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
 %{_mandir}/man1/mailroom.1*
 
 %changelog
+* Tue May 20 2026 Weiwu Zhang <a@colourful.land> - 1.1.11-1
+- Reply now honours Reply-To over From per RFC 5322 §3.6.2. Reply-all with
+  Reply-To moves the diverted From to Cc. Fixes replies looping back into
+  the sender's mailbox when messages arrive via forwarders or alias services.
+- Folder-search warnings now carry the IMAP block label (e.g.
+  "[imap.work] Error searching folder Inbox: ...") for easier multi-account
+  diagnosis.
+- Default search limit raised from 10 to 50 in the CLI, chain parser, and
+  MCP search tool. The /Searches slash-command example preserves the
+  {op_key: {imap_name: {results, provenance}}} shape so each UID stays
+  bound to the correct account.
+
 * Wed May 13 2026 Weiwu Zhang <a@colourful.land> - 1.1.10-1
 - Local cache now serves `read`, `links`, and `attachments` from disk for
   any [imap.NAME] with `maildir` configured; previously only `search`

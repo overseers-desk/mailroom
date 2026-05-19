@@ -1,3 +1,19 @@
+mailroom (1.1.11) unstable; urgency=medium
+
+  * Reply now honours Reply-To over From per RFC 5322 §3.6.2. Reply-all
+    with Reply-To moves the diverted From to Cc. Fixes replies looping
+    back into the sender's mailbox when messages arrive via forwarders
+    or alias services.
+  * Folder-search warnings carry the IMAP block label (e.g.
+    "[imap.work] Error searching folder Inbox: ...") for easier
+    multi-account diagnosis.
+  * Default search limit raised from 10 to 50 in the CLI, chain parser,
+    and MCP search tool. The /Searches slash-command example preserves
+    the {op_key: {imap_name: {results, provenance}}} shape so each UID
+    stays bound to the correct account.
+
+ -- Weiwu Zhang <a@colourful.land>  Tue, 20 May 2026 00:00:00 +0000
+
 mailroom (1.1.10) unstable; urgency=medium
 
   * Local cache now serves `read`, `links`, and `attachments` from
