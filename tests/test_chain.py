@@ -239,7 +239,31 @@ class TestSplitChainArgv:
         assert s[2] == "text"
 
     def test_only_one_verb_returns_none_even_with_format(self):
+        # A --format that *trails* a single verb stays with typer, whose
+        # per-command --format option handles it.
         assert _split_chain_argv(["search", "foo", "--format", "json"]) is None
+
+    def test_pre_verb_format_routes_single_search_through_chain(self):
+        # A --format *ahead* of a single verb must route through the chain
+        # executor: typer's top-level callback has no --format, so falling
+        # back would error "No such option: --format".
+        s = _split_chain_argv(["--format", "json", "search", "foo"])
+        assert s is not None
+        assert s[1] == [("search", ["foo"])]
+        assert s[2] == "json"
+
+    def test_pre_verb_format_with_all_imap_single_search(self):
+        s = _split_chain_argv(["-A", "--format", "oneline", "search", "foo"])
+        assert s is not None
+        assert "-A" in s[0]
+        assert s[1] == [("search", ["foo"])]
+        assert s[2] == "oneline"
+
+    def test_pre_verb_format_equals_form_single_search(self):
+        s = _split_chain_argv(["--format=text", "search", "foo"])
+        assert s is not None
+        assert s[1] == [("search", ["foo"])]
+        assert s[2] == "text"
 
     def test_chain_defaults_limit_at_tail(self):
         s = _split_chain_argv(["search", "a", "search", "b", "-n", "50"])

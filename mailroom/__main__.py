@@ -547,8 +547,12 @@ def _split_chain_argv(
 
     Returns ``(global_argv, [(verb, verb_tokens), ...], output_format,
     chain_defaults)`` when two or more chainable verbs are found at command
-    position; ``None`` otherwise so the caller can fall back to typer
-    dispatch.
+    position, or when a single chainable verb is preceded by a top-level
+    ``--format/-F`` (typer's top-level callback has no ``--format``, so that
+    lone case must run through the chain executor instead of falling back);
+    ``None`` otherwise so the caller can fall back to typer dispatch. A
+    ``--format`` that trails a single verb stays with typer, whose per-command
+    option handles it.
 
     Walks argv left to right in two passes. The first pass strips global
     flags and the chain-level ``--format/-F`` option. Trailing chain-level
@@ -559,6 +563,7 @@ def _split_chain_argv(
     the chain.
     """
     out_format = "json"
+    format_seen_pre = False
     globals_: List[str] = []
     rest: List[str] = []
 
@@ -590,10 +595,14 @@ def _split_chain_argv(
             continue
         if tok in ("--format", "-F") and i + 1 < len(argv):
             out_format = argv[i + 1]
+            if not rest:
+                format_seen_pre = True
             i += 2
             continue
         if tok.startswith("--format=") or tok.startswith("-F="):
             out_format = tok.split("=", 1)[1]
+            if not rest:
+                format_seen_pre = True
             i += 1
             continue
         rest.append(tok)
@@ -641,7 +650,7 @@ def _split_chain_argv(
     if cur_verb is not None:
         verbs.append((cur_verb, cur_args))
 
-    if len(verbs) < 2:
+    if len(verbs) < 2 and not format_seen_pre:
         return None
     return (globals_, verbs, out_format, chain_defaults)
 
