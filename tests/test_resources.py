@@ -68,7 +68,9 @@ class TestResources:
             email.from_ = f"sender{uid}@example.com"
             email.to = [f"recipient{uid}@example.com"]
             email.subject = f"Test Email {uid}"
-            email.date.isoformat.return_value = "2023-01-01T12:00:00"
+            email.date.astimezone.return_value.isoformat.return_value = (
+                "2023-01-01T12:00:00"
+            )
             email.flags = ["\\Seen"]
             email.get_snippet.return_value = f"This is the content of email {uid}"
             email.has_attachments = False
@@ -81,7 +83,9 @@ class TestResources:
         email.to = ["recipient@example.com"]
         email.cc = []
         email.subject = "Test Email 101"
-        email.date.isoformat.return_value = "2023-01-01T12:00:00"
+        email.date.astimezone.return_value.isoformat.return_value = (
+            "2023-01-01T12:00:00"
+        )
         email.flags = ["\\Seen"]
         email.content.get_best_content.return_value = "This is the email content"
         mock_client.fetch_email.return_value = email
@@ -212,7 +216,9 @@ class TestResources:
         email.subject = "Test Email 101"
         email.flags = ["\\Seen"]
         email.attachments = []
-        email.date.isoformat.return_value = "2023-01-01T12:00:00"
+        email.date.astimezone.return_value.isoformat.return_value = (
+            "2023-01-01T12:00:00"
+        )
         email.content.html = None
         email.content.text = "This is the email content"
 

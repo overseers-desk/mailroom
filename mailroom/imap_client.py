@@ -1392,7 +1392,9 @@ class ImapClient:
                             folder=current_folder,
                             flags=email_obj.flags,
                             date_iso=(
-                                email_obj.date.isoformat() if email_obj.date else None
+                                email_obj.date.astimezone().isoformat()
+                                if email_obj.date
+                                else None
                             ),
                             has_attachments=len(email_obj.attachments) > 0,
                         )

@@ -376,11 +376,20 @@ class MuBackend:
 
     @staticmethod
     def _format_date(unix_ts: Any) -> Optional[str]:
-        """Convert a unix timestamp to ISO 8601, returning ``None`` on error."""
+        """Convert a unix timestamp to a local-time ISO 8601 string.
+
+        Returns ``None`` on error. The instant is rendered in the host's
+        local timezone so the displayed wall-clock matches what the user
+        sees in their own client, rather than UTC.
+        """
         if not isinstance(unix_ts, (int, float)):
             return None
         try:
-            return datetime.fromtimestamp(unix_ts, tz=timezone.utc).isoformat()
+            return (
+                datetime.fromtimestamp(unix_ts, tz=timezone.utc)
+                .astimezone()
+                .isoformat()
+            )
         except (OSError, OverflowError, ValueError):
             return None
 

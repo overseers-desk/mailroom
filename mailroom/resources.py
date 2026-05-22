@@ -118,7 +118,11 @@ def register_resources(mcp: FastMCP, imap_client: ImapClient) -> None:
                         "from": str(email_obj.from_),
                         "to": [str(to) for to in email_obj.to],
                         "subject": email_obj.subject,
-                        "date": email_obj.date.isoformat() if email_obj.date else None,
+                        "date": (
+                            email_obj.date.astimezone().isoformat()
+                            if email_obj.date
+                            else None
+                        ),
                         "flags": email_obj.flags,
                         "has_attachments": len(email_obj.attachments) > 0,
                     }
@@ -161,7 +165,7 @@ def register_resources(mcp: FastMCP, imap_client: ImapClient) -> None:
                                 "to": [str(to) for to in email_obj.to],
                                 "subject": email_obj.subject,
                                 "date": (
-                                    email_obj.date.isoformat()
+                                    email_obj.date.astimezone().isoformat()
                                     if email_obj.date
                                     else None
                                 ),
@@ -206,7 +210,7 @@ def register_resources(mcp: FastMCP, imap_client: ImapClient) -> None:
                 parts.append(f"Cc: {', '.join(str(cc) for cc in email_obj.cc)}")
 
             if email_obj.date:
-                parts.append(f"Date: {email_obj.date.isoformat()}")
+                parts.append(f"Date: {email_obj.date.astimezone().isoformat()}")
 
             parts.append(f"Subject: {email_obj.subject}")
             parts.append(f"Flags: {', '.join(email_obj.flags)}")

@@ -204,7 +204,13 @@ class TestMuBackendSearch:
         assert rec["from"] == "Alice <a@b.com>"
         assert rec["to"] == ["c@d.com"]
         assert rec["subject"] == "Hi"
-        assert rec["date"] == "2023-11-14T22:13:20+00:00"
+        # _format_date renders in the host's local zone; assert the instant
+        # rather than the wall-clock so the test holds in any timezone.
+        from datetime import datetime, timezone
+
+        assert datetime.fromisoformat(rec["date"]) == datetime(
+            2023, 11, 14, 22, 13, 20, tzinfo=timezone.utc
+        )
         assert rec["flags"] == ["seen", "attach"]
         assert rec["has_attachments"] is True
 
