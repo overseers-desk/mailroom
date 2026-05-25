@@ -84,6 +84,7 @@ def _get_mu_backend(cfg: MailroomConfig) -> Optional["MuBackend"]:
 
 @app.callback()
 def _global_options(
+    ctx: typer.Context,
     config: Optional[str] = typer.Option(
         None,
         "--config",
@@ -122,9 +123,10 @@ def _global_options(
     _all_imap = all_imap
     level = logging.DEBUG if verbose else logging.WARNING
     setup_logging(level)
-    nudge = _claude_registration_status()
-    if nudge:
-        print(nudge, file=sys.stderr)
+    if ctx.invoked_subcommand != "install-claude-command":
+        nudge = _claude_registration_status()
+        if nudge:
+            print(nudge, file=sys.stderr)
 
 
 def _resolve_imap_names() -> List[str]:
@@ -1383,18 +1385,18 @@ def _claude_registration_status() -> Optional[str]:
         return None
     if not command_file.exists():
         return (
-            "note: Claude Code config found at ~/.claude but mailroom is not "
-            "registered. Run `mailroom install-claude-command` to register the "
-            "mailroom command, so email-related user requests can be resolved "
-            "via mailroom."
+            "mailroom command not installed in Claude Code. "
+            "Run `mailroom install-claude-command` to install it, "
+            "then continue with the user's request."
         )
     installed = _installed_command_version()
     if installed != __version__:
         installed_label = installed if installed else "unknown"
         return (
-            f"note: mailroom command installed at version {installed_label}, "
-            f"current is {__version__}. "
-            "Run `mailroom install-claude-command` to update."
+            f"mailroom command file is at version {installed_label}, "
+            f"package is {__version__}. "
+            "Run `mailroom install-claude-command` to update it, "
+            "then continue with the user's request."
         )
     return None
 
