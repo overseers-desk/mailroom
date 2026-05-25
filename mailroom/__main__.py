@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import typer
 
@@ -828,19 +828,23 @@ def _resolve_smtp_or_exit(
 def _will_fcc(
     smtp: SmtpConfig,
     save_sent_override: Optional[bool],
-    bcc_provided: bool,
+    identity_fcc: Union[bool, str, None],
 ) -> bool:
     """Decide whether the FCC step should run at all.
 
-    The user provided a BCC -> they have arranged their own self-copy
-    (the canonical alternative to FCC); skip FCC and the IMAP connection
-    it would require. ``--save-sent``/``--no-save-sent`` always wins over
-    the BCC heuristic and the SMTP-block default.
+    Precedence: an explicit ``--save-sent``/``--no-save-sent`` wins; then
+    the identity's own ``fcc`` (``False`` off, a folder string or ``True``
+    on); then the SMTP block's host convention. BCC plays no part here:
+    FCC and BCC are independent axes, so an identity can keep a Sent copy
+    *and* BCC a list, and turning FCC off is done explicitly via
+    ``fcc = false``, never as a side effect of setting ``bcc``.
     """
     if save_sent_override is not None:
         return save_sent_override
-    if bcc_provided:
+    if identity_fcc is False:
         return False
+    if identity_fcc is True or isinstance(identity_fcc, str):
+        return True
     return smtp.resolve_save_sent()
 
 
@@ -901,10 +905,11 @@ def _perform_send(
         smtp: Pre-resolved SmtpConfig (see ``_resolve_smtp_or_exit``).
         mime_message: Built MIME message ready to serialise.
         identity: Resolved ``Identity`` carrying address (for the result
-            envelope) and ``sent_folder`` (for FCC resolution).
-        sent_folder_override: When set, overrides ``identity.sent_folder``
-            for the FCC step. ``None`` means use the identity's value or
-            auto-discover.
+            envelope) and ``fcc`` (for FCC folder resolution; only the
+            folder-name string form selects a folder here).
+        sent_folder_override: When set, overrides the identity's ``fcc``
+            folder for the FCC step. ``None`` means use the identity's
+            value or auto-discover.
 
     Returns:
         The standard send-result JSON shape (status, identity, message_ids,
@@ -915,7 +920,8 @@ def _perform_send(
 
     fcc_target: Optional[str] = None
     if client is not None:
-        configured = sent_folder_override or identity.sent_folder
+        identity_fcc_folder = identity.fcc if isinstance(identity.fcc, str) else None
+        configured = sent_folder_override or identity_fcc_folder
         fcc_target = client.resolve_sent_folder(configured=configured)
         if fcc_target is None:
             if configured is not None:
@@ -930,7 +936,7 @@ def _perform_send(
                 typer.echo(
                     "Error: no Sent folder found on the IMAP server. Tried, "
                     "in order: " + ", ".join(SENT_FOLDER_CANDIDATES) + ". "
-                    "Configure [identity.NAME].sent_folder, pass "
+                    "Configure [identity.NAME].fcc, pass "
                     "--sent-folder, or pass --no-save-sent.",
                     err=True,
                 )
@@ -976,8 +982,8 @@ def _resolve_send_route(
     Returns:
         ``None`` when neither flag is present (caller decides what to do
         with it). Otherwise a 3-tuple ``(identity, smtp_override, fcc_imap)``:
-        - identity: Identity to send as. ``identity.sent_folder`` is the
-          chosen FCC folder (mode A: from the block; mode B: the user's
+        - identity: Identity to send as. ``identity.fcc`` is the chosen
+          FCC folder (mode A: from the block; mode B: the user's
           ``--fcc`` folder or None).
         - smtp_override: Set in mode B; ``None`` in mode A so
           ``_perform_send`` runs the identity-driven resolution chain.
@@ -1029,7 +1035,7 @@ def _resolve_send_route(
         if fcc is not None:
             typer.echo(
                 "Error: --fcc is only valid with --smtp; --identity uses "
-                "the [identity.NAME] block's sent_folder.",
+                "the [identity.NAME] block's fcc folder.",
                 err=True,
             )
             raise typer.Exit(1)
@@ -1094,7 +1100,7 @@ def _resolve_send_route(
             address=from_email,
             name=display_name or "",
             smtp=smtp_name,
-            sent_folder=fcc_folder,
+            fcc=fcc_folder,
         )
         return synth, smtp, fcc_imap
 
@@ -1327,7 +1333,8 @@ def _build_inventory(cfg: MailroomConfig) -> Dict[str, Any]:
             "address": ident.address,
             "name": ident.name or None,
             "smtp": ident.smtp,
-            "sent_folder": ident.sent_folder,
+            "fcc": ident.fcc,
+            "bcc": ident.bcc,
         }
     return {
         "default_imap": cfg.default_imap,
@@ -2193,7 +2200,7 @@ def compose(
         "-i",
         help=(
             "Send as the named [identity.NAME] block (resolves From, "
-            "display name, IMAP block, SMTP, sent_folder). Required on "
+            "display name, IMAP block, SMTP, fcc). Required on "
             "--send unless --smtp/--from is given. (Note: --identity "
             "selects an [identity.NAME] block; --imap selects an "
             "[imap.NAME] block, which is a different thing.)"
@@ -2228,7 +2235,7 @@ def compose(
         "--fcc",
         help=(
             "FCC the sent message into IMAP_NAME:FOLDER. Mode B only "
-            "(mode A uses the identity's sent_folder). Without --fcc "
+            "(mode A uses the identity's fcc folder). Without --fcc "
             "in mode B, no copy is saved."
         ),
     ),
@@ -2240,7 +2247,7 @@ def compose(
     sent_folder: Optional[str] = typer.Option(
         None,
         "--sent-folder",
-        help="Override the identity's sent_folder for the FCC step (mode A).",
+        help="Override the identity's fcc folder for the FCC step (mode A).",
     ),
     allow_no_copy: bool = typer.Option(
         False,
@@ -2297,7 +2304,7 @@ def compose(
         effective_bcc: List[str] = list(bcc or [])
         if getattr(identity, "bcc", None):
             effective_bcc.extend(identity.bcc)
-        will_fcc = _will_fcc(smtp_resolved, save_sent, bcc_provided=bool(effective_bcc))
+        will_fcc = _will_fcc(smtp_resolved, save_sent, identity_fcc=identity.fcc)
         _refuse_if_no_copy(
             will_fcc,
             bcc=effective_bcc,
@@ -2483,7 +2490,7 @@ def reply(
     sent_folder: Optional[str] = typer.Option(
         None,
         "--sent-folder",
-        help="Override the identity's sent_folder for the FCC step (mode A).",
+        help="Override the identity's fcc folder for the FCC step (mode A).",
     ),
     allow_no_copy: bool = typer.Option(
         False,
@@ -2603,9 +2610,7 @@ def reply(
             effective_bcc = list(bcc or [])
             if getattr(identity, "bcc", None):
                 effective_bcc.extend(identity.bcc)
-            will_fcc = _will_fcc(
-                smtp_resolved, save_sent, bcc_provided=bool(effective_bcc)
-            )
+            will_fcc = _will_fcc(smtp_resolved, save_sent, identity_fcc=identity.fcc)
             _refuse_if_no_copy(
                 will_fcc,
                 bcc=effective_bcc,
@@ -2748,7 +2753,7 @@ def send_draft(
     sent_folder: Optional[str] = typer.Option(
         None,
         "--sent-folder",
-        help="Override the identity's sent_folder for the FCC step.",
+        help="Override the identity's fcc folder for the FCC step.",
     ),
     dry_run: bool = typer.Option(
         False,
@@ -2887,7 +2892,7 @@ def send_draft(
             )
             return
 
-        will_fcc = _will_fcc(smtp_resolved, save_sent, bcc_provided=bool(envelope_bcc))
+        will_fcc = _will_fcc(smtp_resolved, save_sent, identity_fcc=identity.fcc)
         _refuse_if_no_copy(
             will_fcc,
             bcc=envelope_bcc,

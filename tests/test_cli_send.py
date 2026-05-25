@@ -2,7 +2,7 @@
 two-mode design.
 
 Mode A: ``--identity NAME`` resolves From, display name, IMAP block, SMTP,
-and sent_folder from a configured ``[identity.NAME]``.
+and fcc from a configured ``[identity.NAME]``.
 Mode B: ``--smtp NAME --from EMAIL [--name N] [--fcc IMAP:FOLDER]`` sends
 through a named SMTP block with a free-form From; no ``[identity.*]`` is
 consulted. The SMTP block must carry its own credentials.
@@ -756,8 +756,8 @@ class TestComposeSendFccVerification:
         assert "INBOX.Sent" in err
         assert "Sent Items" in err
 
-    def test_configured_sent_folder_must_exist(self):
-        """A configured ``sent_folder`` that doesn't exist hard-fails by name.
+    def test_configured_fcc_folder_must_exist(self):
+        """A configured ``fcc`` folder that doesn't exist hard-fails by name.
 
         The auto-discover fallback must not silently rewrite away from a
         user-pinned value. The error message has to surface the
@@ -770,7 +770,7 @@ class TestComposeSendFccVerification:
             imap="acct",
             address="primary@x.com",
             name="Primary",
-            sent_folder="Sent",
+            fcc="Sent",
         )
         client = _client()
         client.resolve_sent_folder.side_effect = lambda configured=None: (
@@ -801,16 +801,19 @@ class TestComposeSendFccVerification:
         assert "'Sent'" in err  # quoted configured value
 
 
-class TestComposeSendBccSkipsFcc:
-    """Self-BCC as the self-copy mechanism: skip FCC and IMAP. Covers
-    both the command-line ``--bcc`` form and the identity-level ``bcc``
-    field on ``[identity.NAME]``."""
+class TestComposeSendCopyRetention:
+    """FCC and BCC are independent. A ``--bcc`` (command line) or
+    ``[identity.NAME].bcc`` never turns FCC off; the explicit lever for
+    that is ``--no-save-sent`` (or ``fcc = false`` on the identity). A
+    send must still retain a copy: via FCC, or via a self-inclusive BCC."""
 
-    def test_bcc_to_self_skips_fcc_and_does_not_open_imap(self):
+    def test_bcc_does_not_skip_fcc(self):
+        """A command-line --bcc adds a recipient but leaves FCC running."""
         cfg = _cfg()
+        client = _client()
         with (
             patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch("mailroom.__main__._make_client", return_value=client),
             patch(
                 "mailroom.smtp_transport.send",
                 return_value=(b"raw", _result()),
@@ -833,13 +836,46 @@ class TestComposeSendBccSkipsFcc:
             )
         assert result.exit_code == 0, result.output
         out = json.loads(result.output)
+        # FCC still runs: the Sent copy is filed even with a self-BCC.
+        assert out["fcc_folder"] == "Sent"
+        client.append_raw.assert_called_once()
+
+    def test_no_save_sent_with_self_bcc_sends(self):
+        """--no-save-sent skips FCC; a self-BCC keeps the copy, so no
+        --allow-no-copy is needed and no IMAP connection is opened."""
+        cfg = _cfg()
+        with (
+            patch("mailroom.__main__.load_config", return_value=cfg),
+            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch(
+                "mailroom.smtp_transport.send",
+                return_value=(b"raw", _result()),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "compose",
+                    "--to",
+                    "alice@y.com",
+                    "--bcc",
+                    "primary@x.com",  # the sender's own address
+                    "--body",
+                    "hi",
+                    "--send",
+                    "--identity",
+                    "primary",
+                    "--no-save-sent",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        out = json.loads(result.output)
         assert out["fcc_folder"] is None
-        assert out["fcc_uid"] is None
-        # The point: a self-BCC skips the FCC IMAP connection entirely.
         make_client_mock.assert_not_called()
 
-    def test_bcc_to_third_party_only_refuses_without_override(self):
-        """BCC to an auditor is not a self-copy: refuse."""
+    def test_no_save_sent_third_party_bcc_refuses(self):
+        """--no-save-sent off FCC, and a BCC to an auditor is not a
+        self-copy: refuse."""
         cfg = _cfg()
         with (
             patch("mailroom.__main__.load_config", return_value=cfg),
@@ -858,6 +894,7 @@ class TestComposeSendBccSkipsFcc:
                     "--send",
                     "--identity",
                     "primary",
+                    "--no-save-sent",
                 ],
             )
         assert result.exit_code == 1
@@ -865,7 +902,7 @@ class TestComposeSendBccSkipsFcc:
         err = result.output + (result.stderr or "")
         assert "--allow-no-copy" in err
 
-    def test_bcc_to_third_party_with_allow_no_copy_sends(self):
+    def test_no_save_sent_third_party_bcc_with_allow_no_copy_sends(self):
         cfg = _cfg()
         with (
             patch("mailroom.__main__.load_config", return_value=cfg),
@@ -888,6 +925,7 @@ class TestComposeSendBccSkipsFcc:
                     "--send",
                     "--identity",
                     "primary",
+                    "--no-save-sent",
                     "--allow-no-copy",
                 ],
             )
@@ -920,12 +958,55 @@ class TestComposeSendBccSkipsFcc:
         err = result.output + (result.stderr or "")
         assert "--allow-no-copy" in err
 
-    def test_identity_bcc_added_to_outgoing(self):
+    def test_identity_bcc_does_not_suppress_fcc(self):
+        """FCC and BCC are independent: an identity that BCCs itself and
+        leaves fcc at the default still files a Sent copy."""
         cfg = _cfg()
         cfg.identities["bccself"] = Identity(
             imap="acct",
             address="bccself@x.com",
             bcc=["bccself@x.com"],
+        )
+        client = _client()
+        captured: list = []
+
+        def fake_send(msg, smtp_cfg, transport=None):
+            captured.append(msg)
+            return (msg.as_bytes(), _result())
+
+        with (
+            patch("mailroom.__main__.load_config", return_value=cfg),
+            patch("mailroom.__main__._make_client", return_value=client),
+            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "compose",
+                    "--to",
+                    "alice@y.com",
+                    "--body",
+                    "hi",
+                    "--send",
+                    "--identity",
+                    "bccself",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        bcc_hdr = str(captured[0].get("Bcc", "") or "")
+        assert "bccself@x.com" in bcc_hdr
+        # BCC no longer turns FCC off: the Sent copy is still filed.
+        client.append_raw.assert_called_once()
+
+    def test_identity_fcc_false_skips_fcc(self):
+        """fcc = false disables the Sent copy; with a self-BCC providing the
+        record, the send needs no IMAP connection and no --allow-no-copy."""
+        cfg = _cfg()
+        cfg.identities["listsender"] = Identity(
+            imap="acct",
+            address="listsender@x.com",
+            bcc=["listsender@x.com"],
+            fcc=False,
         )
         captured: list = []
 
@@ -948,13 +1029,13 @@ class TestComposeSendBccSkipsFcc:
                     "hi",
                     "--send",
                     "--identity",
-                    "bccself",
+                    "listsender",
                 ],
             )
         assert result.exit_code == 0, result.output
         bcc_hdr = str(captured[0].get("Bcc", "") or "")
-        assert "bccself@x.com" in bcc_hdr
-        # The self-BCC counts: no FCC needed, so no IMAP open.
+        assert "listsender@x.com" in bcc_hdr
+        # fcc = false: no FCC, so no IMAP connection is opened.
         make_client_mock.assert_not_called()
 
     def test_identity_without_imap_can_still_send(self):

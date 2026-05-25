@@ -934,7 +934,7 @@ class ImapClient:
         target is bogus, instead of sending and then losing the local
         copy.
 
-        When ``configured`` is given (from ``identity.sent_folder`` or
+        When ``configured`` is given (from ``identity.fcc`` or
         ``--sent-folder``), require that exact folder to exist; do not
         fall back. Otherwise prefer SPECIAL-USE ``\\Sent`` (RFC 6154);
         failing that, walk ``SENT_FOLDER_CANDIDATES`` (Dovecot-prefixed

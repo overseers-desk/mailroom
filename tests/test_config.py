@@ -487,7 +487,7 @@ class TestIdentity:
         assert ident.address == "x@y.com"
         assert ident.name == ""
         assert ident.smtp is None
-        assert ident.sent_folder is None
+        assert ident.fcc is None
 
     def test_full(self):
         ident = Identity.from_dict(
@@ -497,16 +497,17 @@ class TestIdentity:
                 "address": "x@y.com",
                 "name": "X",
                 "smtp": "ses",
-                "sent_folder": "Sent",
+                "fcc": "Sent",
             },
         )
         assert ident.imap == "work"
         assert ident.address == "x@y.com"
         assert ident.name == "X"
         assert ident.smtp == "ses"
+        assert ident.fcc == "Sent"
 
     def test_missing_imap(self):
-        with pytest.raises(ValueError, match="missing required string field 'imap'"):
+        with pytest.raises(ValueError, match="retains no copy of sent mail"):
             Identity.from_dict("alice", {"address": "x@y.com"})
 
     def test_missing_address(self):
@@ -573,8 +574,81 @@ class TestIdentity:
         assert ident.bcc == ["x@y.com"]
 
     def test_neither_bcc_nor_imap_rejected(self):
-        with pytest.raises(ValueError, match="missing required string field 'imap'"):
+        with pytest.raises(ValueError, match="retains no copy of sent mail"):
             Identity.from_dict("alice", {"address": "x@y.com"})
+
+    def test_send_only_bcc_must_include_self(self):
+        """A send-only identity (no imap) whose bcc omits its own address
+        keeps no self-copy and is rejected."""
+        with pytest.raises(ValueError, match="retains no copy of sent mail"):
+            Identity.from_dict(
+                "alice",
+                {"address": "x@y.com", "bcc": "audit@y.com"},
+            )
+
+    def test_fcc_folder_string(self):
+        ident = Identity.from_dict(
+            "alice",
+            {"imap": "work", "address": "x@y.com", "fcc": "Archive/Sent"},
+        )
+        assert ident.fcc == "Archive/Sent"
+
+    def test_fcc_true_kept(self):
+        ident = Identity.from_dict(
+            "alice",
+            {"imap": "work", "address": "x@y.com", "fcc": True},
+        )
+        assert ident.fcc is True
+
+    def test_fcc_false_with_self_bcc_ok(self):
+        ident = Identity.from_dict(
+            "alice",
+            {"imap": "work", "address": "x@y.com", "bcc": "x@y.com", "fcc": False},
+        )
+        assert ident.fcc is False
+        assert ident.bcc == ["x@y.com"]
+
+    def test_fcc_false_without_self_bcc_rejected(self):
+        with pytest.raises(ValueError, match="self-inclusive 'bcc' is required"):
+            Identity.from_dict(
+                "alice",
+                {"imap": "work", "address": "x@y.com", "fcc": False},
+            )
+
+    def test_fcc_false_with_third_party_bcc_rejected(self):
+        """A bcc that does not include the identity's own address is not a
+        self-copy, so fcc = false alongside it is still rejected."""
+        with pytest.raises(ValueError, match="retains no copy of sent mail"):
+            Identity.from_dict(
+                "alice",
+                {
+                    "imap": "work",
+                    "address": "x@y.com",
+                    "bcc": "audit@y.com",
+                    "fcc": False,
+                },
+            )
+
+    def test_fcc_folder_without_imap_rejected(self):
+        with pytest.raises(ValueError, match="no 'imap' block is set to APPEND"):
+            Identity.from_dict(
+                "alice",
+                {"address": "x@y.com", "bcc": "x@y.com", "fcc": "Sent"},
+            )
+
+    def test_fcc_empty_string_rejected(self):
+        with pytest.raises(ValueError, match="'fcc' folder name must not be empty"):
+            Identity.from_dict(
+                "alice",
+                {"imap": "work", "address": "x@y.com", "fcc": ""},
+            )
+
+    def test_fcc_invalid_type_rejected(self):
+        with pytest.raises(ValueError, match="'fcc' must be a folder name"):
+            Identity.from_dict(
+                "alice",
+                {"imap": "work", "address": "x@y.com", "fcc": 42},
+            )
 
     def test_bcc_invalid_type_rejected(self):
         with pytest.raises(ValueError, match="'bcc' must be a string or a list"):

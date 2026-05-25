@@ -135,7 +135,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 ### D2. Pre-explained niche behaviours
 
-**Failure case.** In a case where the doc preemptively documented `--allow-no-copy`, `[identity.NAME].bcc`, `sent_folder` auto-detection, and `save_sent = false`, the AI memorised niche configuration paths it almost never needed, while the runtime error message at the moment it actually matters is more specific than the doc's pre-explanation anyway.
+**Failure case.** In a case where the doc preemptively documented `--allow-no-copy`, `[identity.NAME].bcc`, `fcc` folder auto-detection, and `save_sent = false`, the AI memorised niche configuration paths it almost never needed, while the runtime error message at the moment it actually matters is more specific than the doc's pre-explanation anyway.
 
 **Solution.** The source omits these mechanics; the runtime surfaces the relevant error with the exact corrective flag at the point of failure.
 

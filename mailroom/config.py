@@ -20,7 +20,7 @@ import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dotenv import load_dotenv
 
@@ -270,31 +270,47 @@ class Identity:
     header used on transmit. A block with no identities pointing at it
     is read-only; sending is rejected at send time with ``SendDisabled``.
 
-    An identity with ``bcc`` set may omit ``imap``: the BCC list (which
-    typically points at the sender's own mailbox) is the self-copy
-    mechanism, and no IMAP block is needed for FCC. Such an identity is
-    send-only: it cannot fetch, save drafts, or reply to a parent.
+    FCC (filing a Sent copy via IMAP APPEND) and BCC are two independent
+    axes. ``fcc`` decides whether and where a Sent copy is kept; ``bcc``
+    adds recipients on every send. An identity may do both (keep a Sent
+    copy *and* BCC a list), either, or — with care — neither.
+
+    Every identity must retain a copy of what it sends. That holds
+    automatically when ``imap`` is set and ``fcc`` is not ``False`` (the
+    Sent copy is the record). When ``fcc = False`` switches FCC off, or
+    when no ``imap`` block exists to APPEND into, the copy must come from
+    a ``bcc`` that includes this identity's own ``address``. A config
+    that retains no copy at all is rejected at parse time.
+
+    An identity with no ``imap`` block is send-only: it cannot fetch, save
+    drafts, or reply to a parent, and relies on its self-inclusive ``bcc``
+    for the record.
 
     Attributes:
         imap: Name of the [imap.NAME] block this identity belongs to.
-            Optional iff ``bcc`` is set.
+            Optional iff a self-inclusive ``bcc`` provides the copy.
         address: The bare email address used in the ``From`` header.
         name: Display name. Empty string for bare-address From.
         smtp: Name of an ``[smtp.NAME]`` block. When None, falls back to
             ``imap_block.default_smtp`` then to the lone SMTP block if
             exactly one is defined.
-        sent_folder: IMAP folder to FCC the sent message into. When None,
-            uses the [imap.NAME] block's resolved Sent folder.
+        fcc: Where/whether to file the Sent copy, mirroring the tri-state
+            of ``SmtpConfig.save_sent``: ``None`` (absent) defers to the
+            SMTP host convention and files into the block's resolved Sent
+            folder; a folder-name string files there explicitly; ``True``
+            forces FCC into the default Sent folder even on auto-filing
+            hosts; ``False`` disables FCC (then a self-inclusive ``bcc``
+            is required). A string or ``True`` needs an ``imap`` block.
         bcc: Addresses automatically added as BCC on every send from
-            this identity. Use this to BCC a copy to yourself when no
-            IMAP/FCC is configured.
+            this identity. Include the identity's own address to keep a
+            self-copy when FCC is off or unavailable.
     """
 
     address: str
     imap: Optional[str] = None
     name: str = ""
     smtp: Optional[str] = None
-    sent_folder: Optional[str] = None
+    fcc: Union[bool, str, None] = None
     bcc: Optional[List[str]] = None
 
     @classmethod
@@ -332,12 +348,6 @@ class Identity:
             bcc = bcc_list
         imap_raw = data.get("imap")
         if imap_raw is None:
-            if bcc is None:
-                raise ValueError(
-                    f"{where}: missing required string field 'imap' "
-                    f"(name of an [imap.NAME] block); 'bcc' may be set "
-                    f"instead for a send-only identity"
-                )
             imap = None
         else:
             if not isinstance(imap_raw, str) or not imap_raw:
@@ -358,15 +368,43 @@ class Identity:
             raise ValueError(
                 f"{where}: 'smtp' must be a string referencing an [smtp.NAME]"
             )
-        sent_folder = data.get("sent_folder")
-        if sent_folder is not None and not isinstance(sent_folder, str):
-            raise ValueError(f"{where}: 'sent_folder' must be a string when present")
+        fcc_raw = data.get("fcc")
+        fcc: Union[bool, str, None]
+        if fcc_raw is None:
+            fcc = None
+        elif isinstance(fcc_raw, bool):
+            fcc = fcc_raw
+        elif isinstance(fcc_raw, str):
+            if not fcc_raw:
+                raise ValueError(f"{where}: 'fcc' folder name must not be empty")
+            fcc = fcc_raw
+        else:
+            raise ValueError(
+                f"{where}: 'fcc' must be a folder name (string), true, or false"
+            )
+        if (fcc is True or isinstance(fcc, str)) and imap is None:
+            raise ValueError(
+                f"{where}: 'fcc' selects an IMAP Sent folder but no 'imap' "
+                f"block is set to APPEND into; add 'imap', or drop 'fcc'"
+            )
+        # Copy-retention guarantee: every identity must keep a record of what
+        # it sends. FCC provides it (imap set, fcc not switched off); otherwise
+        # a 'bcc' that includes this identity's own address must.
+        fcc_keeps_copy = imap is not None and fcc is not False
+        bcc_keeps_copy = bcc is not None and address.lower() in {b.lower() for b in bcc}
+        if not fcc_keeps_copy and not bcc_keeps_copy:
+            raise ValueError(
+                f"{where}: retains no copy of sent mail. Set 'imap' (FCC to "
+                f"the Sent folder), or add a 'bcc' that includes this "
+                f"identity's own address {address!r}. With 'fcc = false' a "
+                f"self-inclusive 'bcc' is required."
+            )
         return cls(
             imap=imap,
             address=address,
             name=name,
             smtp=smtp,
-            sent_folder=sent_folder,
+            fcc=fcc,
             bcc=bcc,
         )
 
