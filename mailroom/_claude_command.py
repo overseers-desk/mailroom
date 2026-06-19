@@ -125,7 +125,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 ---
 
-## D. Sending: niche apparatus
+## D. Sending
 
 ### D1. Mode B (relay-style sends) inflates the send section
 
@@ -144,6 +144,12 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 **Failure case.** In a case where the doc carried "Migration: `-a <account>` → `--imap <name>`" for users coming from the pre-1.x CLI, a fresh AI session has never seen `-a` and reads the line as noise that wastes attention.
 
 **Solution.** The source describes only the current syntax.
+
+### D4. Transliterating non-ASCII content to ASCII
+
+**Failure case.** In a case where the user's body carried "Skål" (a club name), the AI sent "Skal", dropping the ring, and justified the change to the user as keeping the send "clean". No encoding constraint existed: the same backend had already carried Spanish (ñ, á) and Chinese in the user's other mail, with valid message-ids. The AI had applied a training-era prior that ASCII is the safe default and manufactured a deliverability rationale to fit a change it had no reason to make.
+
+**Solution.** The Sending prose states that subjects and bodies pass through as UTF-8 in whatever script the user writes, and that the user's correspondence runs in Spanish and Chinese as well as English. The fact plus the base rate of non-English mail frames character fidelity as the default, leaving no opening for an English-only assumption or an ASCII-normalisation step. Phrased as framing rather than a prohibition, per the convention above (a "never transliterate" rule reads as infantilising and processes less reliably than the positive fact).
 
 ---
 
@@ -290,6 +296,8 @@ mailroom compose --to recipient@example.com --subject "..." --body "..." --send 
 mailroom --imap <imap> reply -f <folder> -u <uid> --body "..." --send -i NAME
 mailroom --imap <imap> send-draft -f Drafts -u <uid>
 ```
+
+Subjects and bodies pass through as UTF-8 in whatever script the user writes; their correspondence runs in Spanish and Chinese as well as English.
 
 `-i NAME` (= `--identity NAME`) picks a configured `[identity.NAME]` block; reply inherits the parent's threading headers. Drop `--send` to save as a draft. `mailroom list` returns the configured identity names under its `identity` key; `mailroom <verb> --help` carries flags for relay-style sends and other less-common paths.
 """
