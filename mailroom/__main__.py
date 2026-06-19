@@ -2413,7 +2413,9 @@ def reply(
     uid: int = typer.Option(..., "--uid", "-u", help="Email UID to reply to."),
     body: str = typer.Option(..., "--body", "-b", help="Reply body text."),
     no_thread: bool = typer.Option(
-        False, "--no-thread", help="Reply to sender only, without carrying original thread recipients."
+        False,
+        "--no-thread",
+        help="Reply to sender only, without carrying original thread recipients.",
     ),
     cc: Optional[List[str]] = typer.Option(None, "--cc", help="CC recipients."),
     bcc: Optional[List[str]] = typer.Option(
