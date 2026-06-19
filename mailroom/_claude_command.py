@@ -63,7 +63,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 **Failure case.** In a case where the user asked "find Alice's email about the contract", the AI failed to retrieve any results because it synthesised `from:alicedoe@gmail.com` from the name. The address was wrong, the search returned nothing, and the AI reported "no results found" until the user pushed back with the real address.
 
-**Solution.** The frontmatter description carries: "Use this rather than guessing an email address from a name." The body reinforces once: "Use the words from the user's request (a name they mentioned, a domain, a subject phrase); an AI-constructed address often does not match the real one, which sits in each hit's `from`." The example query in the Searches section uses a bare name (`from:alice`) rather than a synthesised full address; the pattern in the example does the work before the prose rule is reached.
+**Solution.** The frontmatter description routes address lookup to the tool in trigger form ("look up a contact's address") rather than asserting a rule; the body carries the explicit steer once: "Use the words from the user's request (a name they mentioned, a domain, a subject phrase); an AI-constructed address often does not match the real one, which sits in each hit's `from`." The example query in the Searches section uses a bare name (`from:alice`) rather than a synthesised full address; the pattern in the example does the work before the prose rule is reached.
 
 ### B2. Surface-disjoint identifiers for one entity
 
@@ -165,7 +165,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 **Failure case.** In a case where the doc stated "don't guess email address" in the frontmatter description, in a "Looking up a person by name" section, and again as commentary on a search example, the AI absorbed three slight variants and treated them as separate rules with overlapping but non-identical scopes.
 
-**Solution.** Each rule appears once, at the position the AI is most likely to be reading when the rule applies. The "don't guess address" rule is in the frontmatter (where call routing happens) and reinforced once in the Searches body.
+**Solution.** Each rule appears once, at the position the AI is most likely to be reading when the rule applies. The "don't guess address" rule lives once in the Searches body, where the AI reads it as it composes a query; the frontmatter routes address lookup in trigger form rather than restating the rule.
 
 ### E4. Imperative tone where peer phrasing fits
 
@@ -229,7 +229,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 SLASH_COMMAND = r"""---
 name: mailroom
-description: Search, read, and look up information from the user's IMAP mailboxes via the mailroom CLI, and send mail when asked. Trigger when the user asks to find or look something up in their email, recall what someone has said in mail, summarise correspondence with a person, search the inbox for a topic, or check replies. Phrases like "tell me about X from emails", "what did X email me about", "find Y in my mail", "search my inbox for Z", or "show recent messages from W" all route here. Use this rather than guessing an email address from a name.
+description: Find, read, or recall anything in the user's email: search emails, check replies, look up a contact's address, pull attachments, show which sender email addresses the user has, or send mail as one of them.
 ---
 
 # mailroom
