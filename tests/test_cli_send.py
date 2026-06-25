@@ -304,6 +304,72 @@ class TestComposeSendModeB:
         bcc_hdr = str(captured[0][0].get("Bcc", "") or "")
         assert "one-off@example.com" in bcc_hdr
 
+    def test_bcc_only_send_without_to_or_cc(self):
+        """--to is optional: a send carrying only --bcc (no visible
+        recipient, e.g. to a distribution list) is allowed. The self-BCC
+        also satisfies the copy-retention guard."""
+        cfg = _cfg_with_relay()
+        captured: list = []
+
+        def fake_send(msg, smtp_cfg, transport=None):
+            captured.append(msg)
+            return (msg.as_bytes(), _result())
+
+        with (
+            patch("mailroom.__main__.load_config", return_value=cfg),
+            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "compose",
+                    "--bcc",
+                    "one-off@example.com",
+                    "--body",
+                    "hi",
+                    "--send",
+                    "--smtp",
+                    "ses",
+                    "--from",
+                    "one-off@example.com",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        # No To/Cc headers; only Bcc carries the recipient.
+        assert captured[0].get("To") is None
+        assert captured[0].get("Cc") is None
+        bcc_hdr = str(captured[0].get("Bcc", "") or "")
+        assert "one-off@example.com" in bcc_hdr
+        make_client_mock.assert_not_called()
+
+    def test_no_recipient_at_all_rejected(self):
+        """No --to, --cc, or --bcc: nothing to send to, rejected before any
+        SMTP work."""
+        cfg = _cfg_with_relay()
+        with (
+            patch("mailroom.__main__.load_config", return_value=cfg),
+            patch("mailroom.smtp_transport.send") as send_mock,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "compose",
+                    "--body",
+                    "hi",
+                    "--send",
+                    "--smtp",
+                    "ses",
+                    "--from",
+                    "one-off@example.com",
+                    "--allow-no-copy",
+                ],
+            )
+        assert result.exit_code == 2
+        send_mock.assert_not_called()
+        err = result.output + (result.stderr or "")
+        assert "at least one recipient" in err
+
     def test_send_with_smtp_from_fcc_opens_named_block(self):
         cfg = _cfg_with_relay()
         client = _client()

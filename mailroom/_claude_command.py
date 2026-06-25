@@ -175,7 +175,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 ### E4. Imperative tone where peer phrasing fits
 
-**Failure case.** In a case where the doc used "must", "always", "ensure", "never" for rules that have edge cases, the AI applied the rules rigidly and refused sensible exceptions. In a related case where the doc wrote behaviour scripts ("show the user before transmitting", "wait for approval") for actions the system already enforces structurally (`compose --send` requires `--to`), the AI mimicked the script as performative supervisor narration even when no approval flow was in play.
+**Failure case.** In a case where the doc used "must", "always", "ensure", "never" for rules that have edge cases, the AI applied the rules rigidly and refused sensible exceptions. In a related case where the doc wrote behaviour scripts ("show the user before transmitting", "wait for approval") for actions the system already enforces structurally (`compose --send` requires `--identity` or `--smtp/--from`), the AI mimicked the script as performative supervisor narration even when no approval flow was in play.
 
 **Solution.** Peer-AI tone throughout the source. Indicative phrasing by default; "avoid" or "prefer" when a leaning is needed; "never" reserved for true invariants. Behaviour scripts ("show before X / wait for Y") appear only when an observed failure shows the AI doing X without Y.
 

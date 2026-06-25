@@ -121,7 +121,10 @@ def create_mime(
     Args:
         from_addr: Address that appears in the ``From`` header.
         body: Plain-text body.
-        to: Recipients (required when *original_email* is None).
+        to: Recipients. For a fresh message at least one of *to*, *cc*, or
+            *bcc* must be present; *to* alone is the usual case, but a
+            Bcc-only message (no visible recipient, e.g. a send to a
+            distribution list) is permitted.
         subject: Subject (required when *original_email* is None; optional for
             replies — defaults to the original subject with ``"Re: "`` prefix).
         cc: CC recipients. For replies with *reply_all*, defaults to the
@@ -146,12 +149,16 @@ def create_mime(
         (otherwise), ready to serialise with ``.as_bytes()``.
 
     Raises:
-        ValueError: If *original_email* is None and *to* is missing/empty, or
-            if any attachment path is not a readable regular file.
+        ValueError: If *original_email* is None and no recipient (to, cc, or
+            bcc) is given, or if any attachment path is not a readable
+            regular file.
     """
     is_reply = original_email is not None
-    if not is_reply and not to:
-        raise ValueError("to is required when original_email is not provided")
+    if not is_reply and not (to or cc or bcc):
+        raise ValueError(
+            "at least one recipient (to, cc, or bcc) is required when "
+            "original_email is not provided"
+        )
 
     if html_body is None and needs_html(body):
         html_body = render_html(body)
@@ -181,7 +188,8 @@ def create_mime(
             to_recipients.extend(to)
     else:
         to_recipients = list(to or [])
-    msg["To"] = ", ".join(str(recipient) for recipient in to_recipients)
+    if to_recipients:
+        msg["To"] = ", ".join(str(recipient) for recipient in to_recipients)
 
     cc_recipients: List[EmailAddress] = []
     if cc:

@@ -2173,8 +2173,14 @@ def _write_raw_output(mime_message: Any, output: str) -> None:
 
 @app.command("compose")
 def compose(
-    to: List[str] = typer.Option(
-        ..., "--to", help="Recipient email address. Repeatable."
+    to: Optional[List[str]] = typer.Option(
+        None,
+        "--to",
+        help=(
+            "Recipient email address. Repeatable. Optional: a message with "
+            "only --bcc (and no --to/--cc) is allowed, e.g. a send to a "
+            "distribution list with no visible recipient."
+        ),
     ),
     body: str = typer.Option(..., "--body", "-b", help="Plain-text body."),
     subject: str = typer.Option("", "--subject", "-s", help="Subject line."),
@@ -2289,6 +2295,14 @@ def compose(
     from mailroom.models import EmailAddress
     from mailroom.smtp_client import create_mime
 
+    if not (to or cc or bcc):
+        typer.echo(
+            "Error: at least one recipient is required. Pass --to (and/or "
+            "--cc); --bcc alone is allowed for a no-visible-recipient send.",
+            err=True,
+        )
+        raise typer.Exit(2)
+
     if send_flag and output is not None:
         typer.echo("Error: --send and --output are mutually exclusive", err=True)
         raise typer.Exit(2)
@@ -2332,7 +2346,7 @@ def compose(
         )
         try:
             from_addr = EmailAddress(name=identity.name, address=identity.address)
-            to_addrs = [EmailAddress.parse(a) for a in to]
+            to_addrs = [EmailAddress.parse(a) for a in to] if to else None
             cc_addrs = [EmailAddress.parse(a) for a in cc] if cc else None
             bcc_addrs = (
                 [EmailAddress.parse(a) for a in effective_bcc]
@@ -2375,7 +2389,7 @@ def compose(
     client = _make_client()
     try:
         from_addr = EmailAddress(name=identity.name, address=identity.address)
-        to_addrs = [EmailAddress.parse(a) for a in to]
+        to_addrs = [EmailAddress.parse(a) for a in to] if to else None
         cc_addrs = [EmailAddress.parse(a) for a in cc] if cc else None
         bcc_addrs = [EmailAddress.parse(a) for a in bcc] if bcc else None
 
