@@ -831,15 +831,28 @@ def _will_fcc(
     smtp: SmtpConfig,
     save_sent_override: Optional[bool],
     identity_fcc: Union[bool, str, None],
+    fcc_imap: Optional[str],
 ) -> bool:
-    """Decide whether the FCC step should run at all.
+    """Decide whether the FCC step will actually file a Sent copy.
 
-    Precedence: an explicit ``--save-sent``/``--no-save-sent`` wins; then
-    the identity's own ``fcc`` (``False`` off, a folder string on); then
-    the SMTP block's host convention. BCC plays no part here: FCC and BCC
-    are independent axes, so turning FCC off is done explicitly via
-    ``fcc = false``, never as a side effect of setting ``bcc``.
+    The FCC step files a copy by IMAP APPEND, so it can only run when
+    there is a target ``[imap.NAME]`` block to file into. A free-form
+    ``--smtp`` send without ``--fcc`` (and a send-only identity with no
+    ``imap``) has no target, so no copy is filed whatever the host
+    convention would otherwise prefer; this returns ``False`` there. The
+    earlier design read the SMTP block's ``save_sent`` preference even
+    with no target, reporting an FCC that never ran and so defeating the
+    no-copy guard downstream.
+
+    Once a target exists, precedence is: an explicit
+    ``--save-sent``/``--no-save-sent`` wins; then the identity's own
+    ``fcc`` (``False`` off, a folder string on); then the SMTP block's
+    host convention. BCC plays no part here: FCC and BCC are independent
+    axes, so turning FCC off is done explicitly via ``fcc = false``,
+    never as a side effect of setting ``bcc``.
     """
+    if not fcc_imap:
+        return False
     if save_sent_override is not None:
         return save_sent_override
     if identity_fcc is False:
@@ -2305,7 +2318,9 @@ def compose(
         effective_bcc: List[str] = list(bcc or [])
         if getattr(identity, "bcc", None):
             effective_bcc.extend(identity.bcc)
-        will_fcc = _will_fcc(smtp_resolved, save_sent, identity_fcc=identity.fcc)
+        will_fcc = _will_fcc(
+            smtp_resolved, save_sent, identity_fcc=identity.fcc, fcc_imap=fcc_imap
+        )
         _refuse_if_no_copy(
             will_fcc,
             bcc=effective_bcc,
@@ -2613,7 +2628,12 @@ def reply(
             effective_bcc = list(bcc or [])
             if getattr(identity, "bcc", None):
                 effective_bcc.extend(identity.bcc)
-            will_fcc = _will_fcc(smtp_resolved, save_sent, identity_fcc=identity.fcc)
+            will_fcc = _will_fcc(
+                smtp_resolved,
+                save_sent,
+                identity_fcc=identity.fcc,
+                fcc_imap=fcc_imap_for_send,
+            )
             _refuse_if_no_copy(
                 will_fcc,
                 bcc=effective_bcc,
@@ -2895,7 +2915,12 @@ def send_draft(
             )
             return
 
-        will_fcc = _will_fcc(smtp_resolved, save_sent, identity_fcc=identity.fcc)
+        will_fcc = _will_fcc(
+            smtp_resolved,
+            save_sent,
+            identity_fcc=identity.fcc,
+            fcc_imap=fcc_imap_for_send,
+        )
         _refuse_if_no_copy(
             will_fcc,
             bcc=envelope_bcc,

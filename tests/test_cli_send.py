@@ -232,6 +232,78 @@ class TestComposeSendModeB:
         assert captured[0][1].host == "email-smtp.eu-west-1.amazonaws.com"
         assert captured[0][1].username == "AKIA"
 
+    def test_smtp_no_fcc_without_override_refuses(self):
+        """Free-form --smtp send with no --fcc has no IMAP block to file
+        into, so no copy can be retained. The SMTP block's save_sent
+        preference (true for any non-Gmail relay like SES) must not be
+        read as an FCC that will happen: with no self-BCC and no
+        --allow-no-copy, the send is refused."""
+        cfg = _cfg_with_relay()
+        with (
+            patch("mailroom.__main__.load_config", return_value=cfg),
+            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch("mailroom.smtp_transport.send") as send_mock,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "compose",
+                    "--to",
+                    "alice@y.com",
+                    "--body",
+                    "hi",
+                    "--send",
+                    "--smtp",
+                    "ses",
+                    "--from",
+                    "one-off@example.com",
+                ],
+            )
+        assert result.exit_code == 1
+        send_mock.assert_not_called()
+        make_client_mock.assert_not_called()
+        err = result.output + (result.stderr or "")
+        assert "--allow-no-copy" in err
+
+    def test_smtp_no_fcc_self_bcc_sends(self):
+        """A free-form --smtp send with no --fcc still has a record when the
+        BCC includes the sender's own address: no --allow-no-copy needed."""
+        cfg = _cfg_with_relay()
+        captured: list = []
+
+        def fake_send(msg, smtp_cfg, transport=None):
+            captured.append((msg, smtp_cfg))
+            return (msg.as_bytes(), _result())
+
+        with (
+            patch("mailroom.__main__.load_config", return_value=cfg),
+            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "compose",
+                    "--to",
+                    "alice@y.com",
+                    "--bcc",
+                    "one-off@example.com",
+                    "--body",
+                    "hi",
+                    "--send",
+                    "--smtp",
+                    "ses",
+                    "--from",
+                    "one-off@example.com",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        out = json.loads(result.output)
+        assert out["fcc_folder"] is None
+        make_client_mock.assert_not_called()
+        bcc_hdr = str(captured[0][0].get("Bcc", "") or "")
+        assert "one-off@example.com" in bcc_hdr
+
     def test_send_with_smtp_from_fcc_opens_named_block(self):
         cfg = _cfg_with_relay()
         client = _client()
@@ -294,6 +366,7 @@ class TestComposeSendModeB:
                     "one-off@example.com",
                     "--name",
                     "One Off",
+                    "--allow-no-copy",
                 ],
             )
         assert result.exit_code == 0, result.output
