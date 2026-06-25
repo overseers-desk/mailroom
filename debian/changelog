@@ -1,3 +1,12 @@
+mailroom (1.1.15) unstable; urgency=medium
+
+  * compose --to is now optional, enabling Bcc-only sends.
+  * free-form --smtp send refuses when no copy can be filed.
+  * slash-command: non-ASCII body and subject sent verbatim; failure-mode D4 added.
+  * slash-command: description routes by trigger; routing logic reformatted.
+
+ -- Weiwu Zhang <a@colourful.land>  Wed, 25 Jun 2026 00:00:00 +0000
+
 mailroom (1.1.14) unstable; urgency=medium
 
   * reply now defaults to reply-all; use --no-thread to reply to sender only.

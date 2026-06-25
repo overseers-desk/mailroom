@@ -1,5 +1,5 @@
 Name:           mailroom
-Version:        1.1.14
+Version:        1.1.15
 Release:        1%{?dist}
 Summary:        Email toolkit for AI assistants and command-line scripting
 License:        MIT
@@ -67,6 +67,12 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
 %{_mandir}/man1/mailroom.1*
 
 %changelog
+* Wed Jun 25 2026 Weiwu Zhang <a@colourful.land> - 1.1.15-1
+- compose --to is now optional, enabling Bcc-only sends.
+- free-form --smtp send refuses when no copy can be filed.
+- slash-command: non-ASCII body and subject sent verbatim; failure-mode D4 added.
+- slash-command: description routes by trigger; routing logic reformatted.
+
 * Sun May 31 2026 Weiwu Zhang <a@colourful.land> - 1.1.14-1
 - reply defaults to reply-all; --no-thread flag replaces --reply-all opt-in.
 
