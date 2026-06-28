@@ -254,6 +254,36 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
             logger.error(f"Error flagging email: {e}")
             return f"Error: {e}"
 
+    @mcp.tool(name="trash")
+    async def trash(
+        folder: str,
+        uid: int,
+        ctx: Context,
+        imap: Optional[str] = None,
+    ) -> str:
+        """Move an email to the server's Trash/Bin (recoverable removal).
+
+        The normal way to remove a message. On Gmail a plain delete only
+        removes the folder label, leaving the message in All Mail; trashing
+        moves it to the Bin, which is what actually removes it.
+
+        Args:
+            folder: Folder containing the email
+            uid: Email UID
+            ctx: MCP context
+            imap: [imap.NAME] block name (None for default)
+
+        Returns:
+            Success message or error message
+        """
+        client = get_client_from_context(ctx, imap)
+        try:
+            success = client.trash_email(uid, folder)
+            return "Email trashed" if success else "Failed to trash email"
+        except Exception as e:
+            logger.error(f"Error trashing email: {e}")
+            return f"Error: {e}"
+
     @mcp.tool(name="delete")
     async def delete(
         folder: str,
@@ -261,7 +291,12 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
         ctx: Context,
         imap: Optional[str] = None,
     ) -> str:
-        """Delete email.
+        """Expunge an email in place, irrecoverable. Normally use trash.
+
+        Sets \\Deleted and EXPUNGEs in the given folder. On standard IMAP a
+        permanent removal that bypasses the Trash; on Gmail it only removes
+        this folder's label, leaving the message in All Mail. For normal
+        removal use the trash tool.
 
         Args:
             folder: Folder name

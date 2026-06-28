@@ -1941,12 +1941,43 @@ def flag(
 # ---------------------------------------------------------------------------
 
 
+@app.command("trash")
+def trash(
+    folder: str = typer.Option(
+        ..., "--folder", "-f", help="Folder containing the email."
+    ),
+    uid: int = typer.Option(..., "--uid", "-u", help="Email UID."),
+) -> None:
+    """Move an email to the server's Trash/Bin (recoverable removal).
+
+    The normal way to remove a message. Resolves the Trash folder via the
+    \\Trash SPECIAL-USE role, falling back to [Gmail]/Bin, [Gmail]/Trash, or
+    Trash. On Gmail this is what actually removes a message; ``delete`` only
+    un-labels it.
+    """
+    client = _make_client()
+    try:
+        success = client.trash_email(uid, folder)
+        _out({"success": success})
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+    finally:
+        client.disconnect()
+
+
 @app.command("delete")
 def delete(
     folder: str = typer.Option(..., "--folder", "-f", help="Folder name."),
     uid: int = typer.Option(..., "--uid", "-u", help="Email UID."),
 ) -> None:
-    """Delete an email."""
+    """Expunge an email in place, irrecoverable. (Normally use trash.)
+
+    Sets \\Deleted and EXPUNGEs in the given folder. On standard IMAP this is
+    a permanent removal that bypasses the Trash; on Gmail it only removes this
+    folder's label, leaving the message in All Mail. For normal removal use
+    ``trash``, which moves the message to the Bin.
+    """
     client = _make_client()
     try:
         success = client.delete_email(uid, folder)

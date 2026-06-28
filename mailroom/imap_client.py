@@ -852,6 +852,65 @@ class ImapClient:
             logger.error(f"Failed to move email: {e}")
             return False
 
+    # Trash/Bin folder names to try when the server does not advertise the
+    # \Trash SPECIAL-USE role. Gmail localises the Bin: en-GB/en-AU accounts
+    # expose [Gmail]/Bin, en-US accounts [Gmail]/Trash.
+    _TRASH_FALLBACK_NAMES = ("[Gmail]/Bin", "[Gmail]/Trash", "Trash")
+
+    def resolve_trash_folder(self) -> Optional[str]:
+        """Return the server's Trash/Bin folder, or None if none is found.
+
+        Prefers the RFC 6154 SPECIAL-USE ``\\Trash`` role; falls back to
+        common Bin/Trash folder names present in the folder list.
+
+        Returns:
+            The Trash folder name, or None when neither the SPECIAL-USE role
+            nor a known fallback name is present.
+        """
+        special = self.find_special_use_folder(b"\\Trash")
+        if special:
+            return special
+        if not self.folder_cache:
+            self.list_folders()
+        for name in self._TRASH_FALLBACK_NAMES:
+            if name in self.folder_cache:
+                return name
+        return None
+
+    def trash_email(self, uid: int, folder: str) -> bool:
+        """Move an email to the server's Trash/Bin (recoverable removal).
+
+        The recommended removal path. A plain EXPUNGE in the source folder
+        does not delete the message on Gmail (it only removes the folder
+        label, leaving the message in All Mail); moving it to the Trash/Bin
+        is what a mail client's "delete" actually does, and the server purges
+        the Bin after its retention window. A message already in the Trash is
+        expunged in place.
+
+        Args:
+            uid: Email UID
+            folder: Folder containing the email
+
+        Returns:
+            True if successful
+
+        Raises:
+            ConnectionError: If not connected and connection fails
+            ValueError: If no Trash/Bin folder can be resolved on the server
+        """
+        self.ensure_connected()
+        trash = self.resolve_trash_folder()
+        if trash is None:
+            raise ValueError(
+                "No Trash/Bin folder found on the server (no \\Trash "
+                "SPECIAL-USE and no [Gmail]/Bin, [Gmail]/Trash, or Trash "
+                "folder). Use `move -t <folder>` to a known folder, or "
+                "`delete` to expunge in place."
+            )
+        if trash == folder:
+            return self.delete_email(uid, folder)
+        return self.move_email(uid, folder, trash)
+
     def delete_email(self, uid: int, folder: str) -> bool:
         """Delete email.
 
