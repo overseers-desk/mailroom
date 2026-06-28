@@ -18,13 +18,13 @@ To install permanently: `uv tool install mailroom`
 ### pipx from GitHub (all features, all platforms)
 
 ```bash
-pipx install "mailroom[mcp] @ git+https://github.com/SmartLayer/mailroom"
+pipx install "mailroom[mcp] @ git+https://github.com/overseers-desk/mailroom"
 ```
 
 This installs everything including MCP server mode. For CLI-only (no MCP):
 
 ```bash
-pipx install "git+https://github.com/SmartLayer/mailroom"
+pipx install "git+https://github.com/overseers-desk/mailroom"
 ```
 
 ### Homebrew (all features, macOS and Linux)
@@ -36,7 +36,7 @@ brew install mailroom
 
 ### Debian / Ubuntu (CLI-only)
 
-Download the latest `.deb` from the [Releases](https://github.com/SmartLayer/mailroom/releases) page and install:
+Download the latest `.deb` from the [Releases](https://github.com/overseers-desk/mailroom/releases) page and install:
 
 ```bash
 sudo apt install ./mailroom_*_all.deb
@@ -82,7 +82,7 @@ brew upgrade mailroom
 
 ### Debian / Ubuntu
 
-Download the new `.deb` from the [Releases](https://github.com/SmartLayer/mailroom/releases) page and re-run the install command. apt handles the upgrade transparently when the version is higher:
+Download the new `.deb` from the [Releases](https://github.com/overseers-desk/mailroom/releases) page and re-run the install command. apt handles the upgrade transparently when the version is higher:
 
 ```bash
 sudo apt install ./mailroom_<version>_all.deb

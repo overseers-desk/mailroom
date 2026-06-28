@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: mailroom
 Upstream-Contact: Weiwu Zhang <a@colourful.land>
-Source: https://github.com/SmartLayer/mailroom
+Source: https://github.com/overseers-desk/mailroom
 
 Files: *
 Copyright: 2025 Weiwu Zhang

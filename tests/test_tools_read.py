@@ -2,7 +2,7 @@
 
 aesop SPAR-A captures the parent's Message-ID, In-Reply-To, and References
 into the approach YAML at draft time so T3 can build a threaded reply locally
-at send time (see SmartLayer/aesop#79). The data is already on the Email
+at send time (see overseers-desk/aesop#79). The data is already on the Email
 model; these tests pin the CLI output contract.
 """
 

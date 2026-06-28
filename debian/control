@@ -9,7 +9,7 @@ Build-Depends:
  python3-all,
  python3-setuptools,
 Standards-Version: 4.6.2
-Homepage: https://github.com/SmartLayer/mailroom
+Homepage: https://github.com/overseers-desk/mailroom
 Rules-Requires-Root: no
 
 Package: mailroom

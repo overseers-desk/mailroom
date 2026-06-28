@@ -3,7 +3,7 @@ Version:        1.1.15
 Release:        1%{?dist}
 Summary:        Email toolkit for AI assistants and command-line scripting
 License:        MIT
-URL:            https://github.com/SmartLayer/mailroom
+URL:            https://github.com/overseers-desk/mailroom
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildArch:      noarch
 
