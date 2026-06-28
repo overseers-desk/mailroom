@@ -1408,7 +1408,7 @@ def _claude_registration_status() -> Optional[str]:
         return (
             f"mailroom command file is at version {installed_label}, "
             f"package is {__version__}. "
-            "Run `mailroom install-claude-command` to update it, "
+            "Run `mailroom install-claude-command --yes` to update it, "
             "then continue with the user's request."
         )
     return None
@@ -1447,13 +1447,21 @@ def status() -> None:
 
 
 @app.command("install-claude-command")
-def install_claude_command() -> None:
+def install_claude_command(
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help="Replace an existing older version without prompting "
+        "(for non-interactive callers such as Claude Code sessions).",
+    ),
+) -> None:
     """Copy the Claude Code command file into ~/.claude/commands/mailroom.md.
 
     After running this command, Claude Code will recognise the ``mailroom``
     skill and route email-related requests through the mailroom CLI.
     If a previous version is already installed, you will be asked to confirm
-    before it is replaced.
+    before it is replaced, unless ``--yes`` is given.
     """
     from mailroom._claude_command import render
 
@@ -1467,13 +1475,14 @@ def install_claude_command() -> None:
         if installed == __version__:
             print(f"Already at {__version__}: {dest}")
             return
-        confirmed = typer.confirm(
-            f"mailroom command already installed ({installed_label}). "
-            f"Replace with {__version__}?"
-        )
-        if not confirmed:
-            print("Aborted.")
-            raise typer.Exit(1)
+        if not yes:
+            confirmed = typer.confirm(
+                f"mailroom command already installed ({installed_label}). "
+                f"Replace with {__version__}?"
+            )
+            if not confirmed:
+                print("Aborted.")
+                raise typer.Exit(1)
 
     dest.write_text(render(__version__))
     print(f"Installed {__version__}: {dest}")
