@@ -30,7 +30,7 @@ pipx install "git+https://github.com/SmartLayer/mailroom"
 ### Homebrew (all features, macOS and Linux)
 
 ```bash
-brew tap SmartLayer/ot https://github.com/SmartLayer/ot
+brew tap SmartLayer/ot
 brew install mailroom
 ```
 
