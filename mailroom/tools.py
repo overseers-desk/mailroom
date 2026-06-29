@@ -392,7 +392,7 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
         Args:
             folder: Folder name
             uid: Email UID
-            action: Action to take (move, read, unread, flag, unflag, delete)
+            action: Action to take (move, read, unread, flag, unflag, trash, delete)
             notes: Optional notes about the decision
             target_folder: Target folder for move action
             ctx: MCP context

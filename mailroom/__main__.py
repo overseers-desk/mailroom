@@ -1996,7 +1996,7 @@ def triage(
     folder: str = typer.Option(..., "--folder", "-f", help="Folder name."),
     uid: int = typer.Option(..., "--uid", "-u", help="Email UID."),
     action: str = typer.Argument(
-        ..., help="Action: move, read, unread, flag, unflag, delete."
+        ..., help="Action: move, read, unread, flag, unflag, trash, delete."
     ),
     target_folder: Optional[str] = typer.Option(
         None, "--target-folder", "-t", help="Target folder (for move)."

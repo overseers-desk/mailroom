@@ -81,3 +81,11 @@ def test_trash_raises_when_no_bin_resolves():
     ):
         with pytest.raises(ValueError, match="No Trash/Bin folder"):
             client.trash_email(12345, "INBOX")
+
+
+def test_triage_trash_action_routes_to_trash_email():
+    client = _client()
+    with patch.object(client, "trash_email", return_value=True) as mock_trash:
+        message = client.process_email_action(12345, "INBOX", "trash")
+        assert message == "Email trashed"
+        mock_trash.assert_called_once_with(12345, "INBOX")
