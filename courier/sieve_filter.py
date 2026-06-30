@@ -1,7 +1,7 @@
 """Per-block redaction policies expressed as Sieve scripts.
 
 A ``[imap.NAME]`` block can carry ``redact = "rules.sieve"``.  The script
-uses a ``mailroom-policy`` extension that adds one custom action,
+uses a ``courier-policy`` extension that adds one custom action,
 ``redact;``: any message whose tests evaluate true is replaced with a
 placeholder Email before reaching the agent or the model provider.
 Date, UID, folder and threading headers survive; subject, body, and
@@ -34,7 +34,7 @@ from sievelib.commands import (  # type: ignore[import-untyped]
 )
 from sievelib.parser import Parser  # type: ignore[import-untyped]
 
-from mailroom.models import Email
+from courier.models import Email
 
 logger = logging.getLogger(__name__)
 

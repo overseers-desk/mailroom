@@ -1,4 +1,4 @@
-require ["mailroom-policy"];
+require ["courier-policy"];
 
 # Example redact policy: hide every message where the work address
 # is not a participant. Visibility = NOT (this rule), so personal

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mailroom.models import Email, EmailAddress, EmailContent
-from mailroom.smtp_client import _find_reply_from_address, compose_and_save_reply_draft
+from courier.models import Email, EmailAddress, EmailContent
+from courier.smtp_client import _find_reply_from_address, compose_and_save_reply_draft
 
 
 class TestFindReplyFromAddress:

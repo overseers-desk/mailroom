@@ -12,8 +12,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional, Union
 
-from mailroom.markdown_render import needs_html, render_html
-from mailroom.models import Email, EmailAddress
+from courier.markdown_render import needs_html, render_html
+from courier.models import Email, EmailAddress
 
 logger = logging.getLogger(__name__)
 

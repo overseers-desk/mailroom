@@ -6,7 +6,7 @@ suspicious emails without downloading the full HTML content.
 """
 
 import json
-from mailroom.models import Email, EmailAddress, EmailContent
+from courier.models import Email, EmailAddress, EmailContent
 
 
 def example_fraud_detection():

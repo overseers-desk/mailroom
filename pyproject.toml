@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mailroom"
+name = "courier"
 version = "1.1.15"
 description = "Email toolkit for AI assistants and command-line scripting"
 readme = "README.md"
@@ -48,15 +48,15 @@ dev = [
 ]
 
 [project.scripts]
-mailroom = "mailroom.__main__:main"
+courier = "courier.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/overseers-desk/mailroom"
-Issues = "https://github.com/overseers-desk/mailroom/issues"
+Homepage = "https://github.com/overseers-desk/courier"
+Issues = "https://github.com/overseers-desk/courier/issues"
 Author = "https://www.linkedin.com/in/weiwuzhang/"
 
 [tool.setuptools.packages.find]
-include = ["mailroom*"]
+include = ["courier*"]
 
 [tool.black]
 line-length = 88

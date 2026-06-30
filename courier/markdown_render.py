@@ -1,6 +1,6 @@
 """Auto-render plain-text email body to HTML when it contains markdown structure.
 
-Used by :func:`mailroom.smtp_client.create_mime` to decide whether a
+Used by :func:`courier.smtp_client.create_mime` to decide whether a
 ``text/plain``-only message should be upgraded to ``multipart/alternative``
 with an HTML part. The trigger is narrow: only markdown tables and ATX
 headings, since those are the structures that collapse in proportional-font

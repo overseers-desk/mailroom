@@ -1,4 +1,4 @@
-mailroom (1.1.15) unstable; urgency=medium
+courier (1.1.15) unstable; urgency=medium
 
   * compose --to is now optional, enabling Bcc-only sends.
   * free-form --smtp send refuses when no copy can be filed.
@@ -7,13 +7,13 @@ mailroom (1.1.15) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Wed, 25 Jun 2026 00:00:00 +0000
 
-mailroom (1.1.14) unstable; urgency=medium
+courier (1.1.14) unstable; urgency=medium
 
   * reply now defaults to reply-all; use --no-thread to reply to sender only.
 
  -- Weiwu Zhang <a@colourful.land>  Sun, 31 May 2026 00:00:00 +0000
 
-mailroom (1.1.13) unstable; urgency=medium
+courier (1.1.13) unstable; urgency=medium
 
   * install-claude-command no longer warns about the command being unregistered
     or dated when it is the subcommand being run; the nudge is suppressed for
@@ -24,7 +24,7 @@ mailroom (1.1.13) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Sun, 25 May 2026 00:00:00 +0000
 
-mailroom (1.1.12) unstable; urgency=medium
+courier (1.1.12) unstable; urgency=medium
 
   * Folder-scoped search is now served from the local mu cache under the
     same eligibility check as whole-mailbox search, instead of always
@@ -39,7 +39,7 @@ mailroom (1.1.12) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Fri, 22 May 2026 00:00:00 +0000
 
-mailroom (1.1.11) unstable; urgency=medium
+courier (1.1.11) unstable; urgency=medium
 
   * Reply now honours Reply-To over From per RFC 5322 §3.6.2. Reply-all
     with Reply-To moves the diverted From to Cc. Fixes replies looping
@@ -55,7 +55,7 @@ mailroom (1.1.11) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Tue, 20 May 2026 00:00:00 +0000
 
-mailroom (1.1.10) unstable; urgency=medium
+courier (1.1.10) unstable; urgency=medium
 
   * Local cache now serves `read`, `links`, and `attachments` from
     disk for any [imap.NAME] with `maildir` configured; previously
@@ -69,10 +69,10 @@ mailroom (1.1.10) unstable; urgency=medium
     against a redact-bearing block serve from cache in ~5 s
     instead of ~16 s, and the maildir path is dropped from
     redacted records to close that leakage.
-  * Warnings from `mailroom.imap_client` (search-folder timeouts,
+  * Warnings from `courier.imap_client` (search-folder timeouts,
     connection-verification failures, IMAP logout errors) are
     routed through syslog. On systemd hosts the records are
-    queryable via `journalctl -t mailroom`; on platforms with no
+    queryable via `journalctl -t courier`; on platforms with no
     reachable syslog socket the existing stderr handler stays in
     place. Closes #39.
   * When `search` falls through to iterating every selectable
@@ -87,7 +87,7 @@ mailroom (1.1.10) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Wed, 13 May 2026 13:00:00 +0000
 
-mailroom (1.1.9) unstable; urgency=medium
+courier (1.1.9) unstable; urgency=medium
 
   * `-i` is now `--identity`, used by `compose`, `reply`, and
     `send-draft`. The previous 1.1.8 assignment of `-i` to
@@ -97,65 +97,65 @@ mailroom (1.1.9) unstable; urgency=medium
     no short form. "identifier" was ambiguous against the project's
     other identifier-shaped fields (identity name, imap block name,
     smtp block name, message-id, uid). `--attachment` says exactly
-    what it picks. Migration: `mailroom save -f INBOX -u 100
-    -i Billete.pdf -o out.pdf` → `mailroom save -f INBOX -u 100
+    what it picks. Migration: `courier save -f INBOX -u 100
+    -i Billete.pdf -o out.pdf` → `courier save -f INBOX -u 100
     --attachment Billete.pdf -o out.pdf`.
   * `--imap` remains the only spelling for the global IMAP-block
     selector; no short form.
 
  -- Weiwu Zhang <a@colourful.land>  Sun, 10 May 2026 13:00:00 +0000
 
-mailroom (1.1.8) unstable; urgency=medium
+courier (1.1.8) unstable; urgency=medium
 
   * `-i` is no longer a shorthand for `--imap`. Use `--imap NAME`
     at the top level. `-i` is now exclusively `save --identifier`
-    (closes #36): previously `mailroom -i acct save -f INBOX -u 100
+    (closes #36): previously `courier -i acct save -f INBOX -u 100
     -i "Billete.pdf" -o out.pdf` failed because the argv
     preprocessor consumed `save -i "Billete.pdf"` as a second
     `--imap`. Removing the shorthand removes the collision at the
-    source. Migration: `mailroom -i NAME ...` →
-    `mailroom --imap NAME ...`.
+    source. Migration: `courier -i NAME ...` →
+    `courier --imap NAME ...`.
   * `-n/--limit` and `-f/--folder` are now chain-level: a trailing
     `-n N` or `-f FOLDER` after the last verb applies to every
     chained verb that doesn't set its own value (closes #34). So
-    `mailroom search a search b -f INBOX -n 5` runs both searches
+    `courier search a search b -f INBOX -n 5` runs both searches
     against INBOX with limit 5 instead of leaving the trailing
     flags attached to the last verb.
   * MCP tool coverage: `search_emails`, `read`, and `folders` are
     consistently exposed; thread matching uses strict-subject
     semantics (closes #11).
   * `install-claude-command` is now version-aware. It checks the
-    installed `mailroom.md` against the bundled one and prompts
+    installed `courier.md` against the bundled one and prompts
     before overwriting; the `--force` flag is removed. The status
     nudge surfaces globally when registration is missing.
 
  -- Weiwu Zhang <a@colourful.land>  Sun, 10 May 2026 12:00:00 +0000
 
-mailroom (1.1.7) unstable; urgency=medium
+courier (1.1.7) unstable; urgency=medium
 
   * `search` and `read` repeat at the top level to run several
     operations in one invocation:
-        mailroom -A search "sergio" search "panedas" read -f INBOX -u 42
+        courier -A search "sergio" search "panedas" read -f INBOX -u 42
     Each operation gets its own outer key in the result, so per-keyword
     hit attribution is preserved. Output is JSON of shape
     `{op_key: {imap_name: result}}`, the same shape single-op `search`
     and `read` already produced.
-  * The `batch` subcommand is removed. Anyone driving mailroom from a
-    script that ran `mailroom batch "search foo" "search bar"` should
-    switch to `mailroom search foo search bar`. The output shape is
+  * The `batch` subcommand is removed. Anyone driving courier from a
+    script that ran `courier batch "search foo" "search bar"` should
+    switch to `courier search foo search bar`. The output shape is
     unchanged. Issue #34 tracks promoting `--limit` and `--folder` to
     chain-level so they apply to every chained verb.
 
  -- Weiwu Zhang <a@colourful.land>  Wed, 06 May 2026 12:00:00 +0000
 
-mailroom (1.1.6) unstable; urgency=medium
+courier (1.1.6) unstable; urgency=medium
 
   * New `install-claude-command` subcommand: copies the bundled
-    Claude Code command file into ~/.claude/commands/mailroom.md so
-    Claude Code recognises mailroom and routes email-related prompts
+    Claude Code command file into ~/.claude/commands/courier.md so
+    Claude Code recognises courier and routes email-related prompts
     through the CLI. The file ships inside the Python package, so
     the same one-liner works regardless of install method.
-    `mailroom status` notes when ~/.claude exists but mailroom is
+    `courier status` notes when ~/.claude exists but courier is
     not yet registered.
   * Plain-text bodies containing markdown tables or headings now
     auto-render an HTML alternative on send. The wire form goes as
@@ -166,9 +166,9 @@ mailroom (1.1.6) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Wed, 06 May 2026 00:00:00 +0000
 
-mailroom (1.1.5) unstable; urgency=medium
+courier (1.1.5) unstable; urgency=medium
 
-  * `mailroom status` is now a connection-probe table rather than a
+  * `courier status` is now a connection-probe table rather than a
     JSON inventory. Every [imap.NAME] runs a full IMAP login attempt
     and every [smtp.NAME] runs an EHLO + STARTTLS handshake plus an
     authenticated login when the block carries credentials. Output
@@ -176,12 +176,12 @@ mailroom (1.1.5) unstable; urgency=medium
     right now". Probes run concurrently across blocks. Template SMTP
     blocks (no own creds, inherit at send time) are probed as far as
     STARTTLS only and marked accordingly. Scripts that parsed the
-    prior status JSON inventory should switch to `mailroom list`,
+    prior status JSON inventory should switch to `courier list`,
     which still emits it. Closes #29.
 
  -- Weiwu Zhang <a@colourful.land>  Wed, 06 May 2026 00:00:00 +0000
 
-mailroom (1.1.4) unstable; urgency=medium
+courier (1.1.4) unstable; urgency=medium
 
   * New per-account redact policy. An optional `redact = "rules.sieve"`
     field on `[imap.NAME]` points at a Sieve script; messages matching
@@ -202,15 +202,15 @@ mailroom (1.1.4) unstable; urgency=medium
     Supported Sieve subset: `address` and `header` tests with `:is`,
     `:contains`, and `:matches` (leading/trailing glob); `anyof`,
     `allof`, `not` combinators; one custom action `redact;` declared
-    by `require ["mailroom-policy"];`. Out-of-subset constructs fail
+    by `require ["courier-policy"];`. Out-of-subset constructs fail
     closed at config-load time. Sample script in
-    /usr/share/doc/mailroom/examples/work-only.sieve.
+    /usr/share/doc/courier/examples/work-only.sieve.
   * New runtime dependency on python3-sievelib for the redact policy
     parser. Accounts that do not configure `redact` are unaffected.
 
  -- Weiwu Zhang <a@colourful.land>  Tue, 06 May 2026 00:00:00 +0000
 
-mailroom (1.1.3) unstable; urgency=medium
+courier (1.1.3) unstable; urgency=medium
 
   * Refuse to send when no copy of the message will be retained. A send
     is allowed only if FCC will run, or the BCC list includes the
@@ -228,7 +228,7 @@ mailroom (1.1.3) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Mon, 04 May 2026 00:00:00 +0000
 
-mailroom (1.1.2) unstable; urgency=medium
+courier (1.1.2) unstable; urgency=medium
 
   * compose/reply/send-draft --send now require an explicit route. Either
     --identity NAME (mode A: resolves From, display name, IMAP block,
@@ -242,7 +242,7 @@ mailroom (1.1.2) unstable; urgency=medium
     success; without --fcc no copy is saved). The SMTP block must carry
     its own username/password in mode B, since no [imap.*] is in scope
     for credential inheritance.
-  * reply --send: when neither flag is given, mailroom matches the
+  * reply --send: when neither flag is given, courier matches the
     parent's recipients against identities; if no recipient matches, the
     command errors rather than silently picking identities[0]. Drafting
     keeps the previous fallback behaviour.
@@ -252,7 +252,7 @@ mailroom (1.1.2) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Sun, 03 May 2026 00:00:00 +0000
 
-mailroom (1.1.1) unstable; urgency=medium
+courier (1.1.1) unstable; urgency=medium
 
   * SMTP send capability: --send flag on compose and reply transmits via
     SMTP instead of saving to drafts; new send-draft subcommand reads a
@@ -266,11 +266,11 @@ mailroom (1.1.1) unstable; urgency=medium
     identity's Sent folder, with Bcc stripped and Message-ID rewritten.
   * New config-check subcommand validates cross-references and identity
     resolution without performing IMAP or SMTP traffic; the same warnings
-    surface on `mailroom`, `--help`, `status`, and `list-accounts`.
+    surface on `courier`, `--help`, `status`, and `list-accounts`.
 
  -- Weiwu Zhang <a@colourful.land>  Sat, 02 May 2026 00:00:00 +0000
 
-mailroom (1.1.0) unstable; urgency=medium
+courier (1.1.0) unstable; urgency=medium
 
   * Batch-first JSON output: all commands now wrap results under an operation
     key {"search from:x": {"account": {...}}} — breaking change for 1.0.x
@@ -284,7 +284,7 @@ mailroom (1.1.0) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Tue, 28 Apr 2026 00:00:00 +0000
 
-mailroom (1.0.3) unstable; urgency=medium
+courier (1.0.3) unstable; urgency=medium
 
   * search: AI-friendly CLI compat. Soft-redirect of search-variant subcommand
     names (email_search, email-search, search_email, search-email) to 'search'
@@ -323,7 +323,7 @@ mailroom (1.0.3) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Sun, 26 Apr 2026 00:00:00 +0000
 
-mailroom (1.0.2) unstable; urgency=medium
+courier (1.0.2) unstable; urgency=medium
 
   * reply: add attachment support. CLI gains --attach (repeatable), MCP reply
     tool gains attachments parameter. create_reply_mime handles multipart/mixed
@@ -331,7 +331,7 @@ mailroom (1.0.2) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Sat, 18 Apr 2026 00:00:00 +0000
 
-mailroom (1.0.1) unstable; urgency=medium
+courier (1.0.1) unstable; urgency=medium
 
   * Rename CLI commands to aerc-aligned short verbs (search, move, reply, etc.)
   * Rename MCP tools to kebab-case (search, move, mark-read, etc.)
@@ -343,7 +343,7 @@ mailroom (1.0.1) unstable; urgency=medium
 
  -- Weiwu Zhang <a@colourful.land>  Mon, 06 Apr 2026 00:00:00 +0000
 
-mailroom (1.0.0) unstable; urgency=medium
+courier (1.0.0) unstable; urgency=medium
 
   * Initial release.
 

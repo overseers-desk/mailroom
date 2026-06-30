@@ -1,4 +1,4 @@
-"""Integration tests for direct tool usage with the Mailroom client.
+"""Integration tests for direct tool usage with the Courier client.
 
 These tests directly import and use the IMAP tool functions to test their functionality
 with a real Gmail account. This approach bypasses the server API and CLI interfaces
@@ -14,20 +14,20 @@ import pytest
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from mailroom.config import load_config  # noqa: E402
-from mailroom.imap_client import ImapClient  # noqa: E402
+from courier.config import load_config  # noqa: E402
+from courier.imap_client import ImapClient  # noqa: E402
 
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration
 
 try:
-    from mailroom.tools import search as search_tool
+    from courier.tools import search as search_tool
 except ImportError:
     search_tool = None
 
 
 class TestDirectToolsIntegration:
-    """Test direct usage of Mailroom tools without going through the server or CLI."""
+    """Test direct usage of Courier tools without going through the server or CLI."""
 
     @pytest.fixture(scope="class")
     async def imap_client(self):

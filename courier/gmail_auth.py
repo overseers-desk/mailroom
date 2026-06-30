@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from mailroom.browser_auth import perform_oauth_flow
+from courier.browser_auth import perform_oauth_flow
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

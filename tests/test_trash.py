@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 import pytest
 
-from mailroom.config import ImapBlock
-from mailroom.imap_client import ImapClient
+from courier.config import ImapBlock
+from courier.imap_client import ImapClient
 
 
 def _client() -> ImapClient:

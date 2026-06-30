@@ -18,9 +18,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.imap_client import ImapClient
-from mailroom.models import extract_links_batch
-from mailroom.resources import get_client_from_context
+from courier.imap_client import ImapClient
+from courier.models import extract_links_batch
+from courier.resources import get_client_from_context
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
         Returns:
             Dictionary with status and the UID of the created draft
         """
-        from mailroom.smtp_client import compose_and_save_draft
+        from courier.smtp_client import compose_and_save_draft
 
         client = get_client_from_context(ctx, imap)
         return compose_and_save_draft(
@@ -118,7 +118,7 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
         Returns:
             Dictionary with status and the UID of the created draft
         """
-        from mailroom.smtp_client import compose_and_save_reply_draft
+        from courier.smtp_client import compose_and_save_reply_draft
 
         client = get_client_from_context(ctx, imap)
         return compose_and_save_reply_draft(
@@ -442,7 +442,7 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
         Returns:
             Dictionary with the processing result
         """
-        from mailroom.workflows.meeting_reply import process_meeting_invite_workflow
+        from courier.workflows.meeting_reply import process_meeting_invite_workflow
 
         client = get_client_from_context(ctx, imap)
         return process_meeting_invite_workflow(client, folder, uid, availability_mode)
@@ -603,7 +603,7 @@ def register_tools(mcp: FastMCP, imap_client: ImapClient) -> None:
         Returns:
             Status message with the UID assigned by the destination server.
         """
-        from mailroom.imap_client import copy_email_between_imap_blocks
+        from courier.imap_client import copy_email_between_imap_blocks
 
         source_client = get_client_from_context(ctx, from_imap)
         dest_client = get_client_from_context(ctx, imap)

@@ -1,6 +1,6 @@
 # Local Cache: offlineimap + mu
 
-For AI agents searching across years of mail, IMAP is slow: every query round-trips to the server. Mailroom can answer `search`, `read`, `links`, and `attachments` from a local maildir instead, orders of magnitude faster, and falls back to IMAP transparently when the local copy can't serve the call.
+For AI agents searching across years of mail, IMAP is slow: every query round-trips to the server. Courier can answer `search`, `read`, `links`, and `attachments` from a local maildir instead, orders of magnitude faster, and falls back to IMAP transparently when the local copy can't serve the call.
 
 This is opt-in. Without a `[local_cache]` block in the config, every `search` goes to IMAP exactly as before.
 
@@ -10,9 +10,9 @@ Three components, each owned by a separate project:
 
 - An IMAP-to-Maildir sync tool (e.g. [offlineimap](https://github.com/OfflineIMAP/offlineimap) or [mbsync/isync](https://isync.sourceforge.io/)) keeps a maildir on disk in sync with your IMAP server.
 - [mu](https://www.djcbsoftware.nl/code/mu/) indexes the maildir into a Xapian database and answers queries.
-- mailroom reads `mu`'s index for `search` and reads the maildir files directly for `read`, `links`, and `attachments`, all under one eligibility rule. When `mu` is missing, the index is missing or stale, the query is untranslatable, the file is not yet on disk, or `--no-cache` is given, it falls back to IMAP.
+- courier reads `mu`'s index for `search` and reads the maildir files directly for `read`, `links`, and `attachments`, all under one eligibility rule. When `mu` is missing, the index is missing or stale, the query is untranslatable, the file is not yet on disk, or `--no-cache` is given, it falls back to IMAP.
 
-Mailroom does not run any IMAP-to-Maildir syncer (e.g. `offlineimap`), nor `mu index`. The contract is "a maildir exists and `mu` indexes it"; how the maildir gets populated and how often `mu` re-indexes is your decision and runs outside mailroom.
+Courier does not run any IMAP-to-Maildir syncer (e.g. `offlineimap`), nor `mu index`. The contract is "a maildir exists and `mu` indexes it"; how the maildir gets populated and how often `mu` re-indexes is your decision and runs outside courier.
 
 ## Prerequisites
 
@@ -21,9 +21,9 @@ Install an IMAP-to-Maildir syncer (e.g. offlineimap) and mu through your package
 - offlineimap: https://github.com/OfflineIMAP/offlineimap (configuration in `~/.offlineimaprc`)
 - mu: https://www.djcbsoftware.nl/code/mu/ (`mu init --maildir=/path/to/maildir`, then `mu index`)
 
-A working setup ends with a maildir on disk and `mu find subject:hello` returning hits. Once that holds, mailroom can use it.
+A working setup ends with a maildir on disk and `mu find subject:hello` returning hits. Once that holds, courier can use it.
 
-## Wiring mailroom
+## Wiring courier
 
 Add a `[local_cache]` block and a `maildir` field on the `[imap.*]` block whose mail you indexed:
 
@@ -43,7 +43,7 @@ imap = "gmail"
 address = "you@gmail.com"
 ```
 
-`max_staleness_seconds` is the threshold past which mailroom considers the index stale and falls back to IMAP for that query. Pick a value matching how often your sync job runs (e.g. if you run offlineimap every hour, `max_staleness_seconds = 4000` lets a slightly delayed sync still serve the query).
+`max_staleness_seconds` is the threshold past which courier considers the index stale and falls back to IMAP for that query. Pick a value matching how often your sync job runs (e.g. if you run offlineimap every hour, `max_staleness_seconds = 4000` lets a slightly delayed sync still serve the query).
 
 ## Contract and fallback
 

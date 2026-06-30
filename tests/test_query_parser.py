@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from mailroom.query_parser import (
+from courier.query_parser import (
     UntranslatableQuery,
     parse_query,
     parse_query_to_mu,
@@ -322,7 +322,7 @@ class TestEdgeCases:
 
 
 class TestMuEmit:
-    """parse_query_to_mu translates mailroom queries into mu CLI strings."""
+    """parse_query_to_mu translates courier queries into mu CLI strings."""
 
     # ------------------------------------------------------------------
     # prefix:value terms

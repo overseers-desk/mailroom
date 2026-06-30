@@ -1,9 +1,9 @@
 """Integration test for the mu-backed local cache.
 
-Skipped unless ``mu`` is on PATH and ``MAILROOM_TEST_MU_MAILDIR`` points
+Skipped unless ``mu`` is on PATH and ``COURIER_TEST_MU_MAILDIR`` points
 at an indexed maildir.  When opted in, the test invokes
 ``MuBackend.search`` for real and asserts the returned shape matches the
-mailroom contract.
+courier contract.
 """
 
 import os
@@ -11,8 +11,8 @@ import shutil
 
 import pytest
 
-from mailroom.config import ImapBlock, LocalCacheConfig
-from mailroom.local_cache import MuBackend
+from courier.config import ImapBlock, LocalCacheConfig
+from courier.local_cache import MuBackend
 
 pytestmark = pytest.mark.integration
 
@@ -20,8 +20,8 @@ pytestmark = pytest.mark.integration
 def _skip_unless_configured() -> None:
     if shutil.which("mu") is None:
         pytest.skip("mu binary not on PATH")
-    if not os.environ.get("MAILROOM_TEST_MU_MAILDIR"):
-        pytest.skip("MAILROOM_TEST_MU_MAILDIR not set")
+    if not os.environ.get("COURIER_TEST_MU_MAILDIR"):
+        pytest.skip("COURIER_TEST_MU_MAILDIR not set")
 
 
 def test_mu_search_real_index() -> None:
@@ -31,7 +31,7 @@ def test_mu_search_real_index() -> None:
     cfg = LocalCacheConfig(
         indexer="mu",
         max_staleness_seconds=86400,
-        mu_index=os.environ.get("MAILROOM_TEST_MU_INDEX"),
+        mu_index=os.environ.get("COURIER_TEST_MU_INDEX"),
     )
     backend = MuBackend(cfg)
 
@@ -41,7 +41,7 @@ def test_mu_search_real_index() -> None:
         username="test@example.com",
         password="password",
         use_ssl=True,
-        maildir=os.environ["MAILROOM_TEST_MU_MAILDIR"],
+        maildir=os.environ["COURIER_TEST_MU_MAILDIR"],
     )
 
     results = backend.search(block, "from:alice", limit=3)

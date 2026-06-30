@@ -1,6 +1,6 @@
 # Voices
 
-Verbatim quotes (where available) and paraphrases (clearly marked) from public discussions about giving an LLM access to email. Snapshot built May 2026 from Hacker News, Reddit, blog posts, and reporting. Each entry maps to a mailroom USP from `usp-ranking.md` or labels itself as a `gap`.
+Verbatim quotes (where available) and paraphrases (clearly marked) from public discussions about giving an LLM access to email. Snapshot built May 2026 from Hacker News, Reddit, blog posts, and reporting. Each entry maps to a courier USP from `usp-ranking.md` or labels itself as a `gap`.
 
 The corpus exists so feature copy speaks in words users already use. When writing about a feature, grep this file for the USP number and read the user's own language before drafting.
 
@@ -56,7 +56,7 @@ The corpus exists so feature copy speaks in words users already use. When writin
 
 [paraphrase] First malicious npm MCP server (postmark-mcp v1.0.16, September 2025) silently BCC'd every outgoing email to the attacker's address, compromising approximately 300 organisations before discovery. The supply-chain risk for MCP email servers is no longer hypothetical.
 > Source: industry coverage, September 2025 (postmark-mcp incident)
-> Maps to: USP #3 (and: this is the kind of incident that, framed against mailroom, lets the project pitch its small surface area and Sieve redaction layer as relevant defenses)
+> Maps to: USP #3 (and: this is the kind of incident that, framed against courier, lets the project pitch its small surface area and Sieve redaction layer as relevant defenses)
 
 ---
 
@@ -236,7 +236,7 @@ The corpus exists so feature copy speaks in words users already use. When writin
 
 ## 10. Write-side inbox management (label, move, archive) → gap
 
-[paraphrase] Use case #7 in the broader-web survey: every triage tutorial across n8n, Zapier, LangGraph, Lindy, and Make.com builds label-and-route logic on top of email reads. Mailroom has `move` and `flag` tools but does not surface them as a USP. The surface area exists; the marketing positioning does not.
+[paraphrase] Use case #7 in the broader-web survey: every triage tutorial across n8n, Zapier, LangGraph, Lindy, and Make.com builds label-and-route logic on top of email reads. Courier has `move` and `flag` tools but does not surface them as a USP. The surface area exists; the marketing positioning does not.
 > Source: aggregate across n8n template 9157, kaymen99/langgraph-email-automation, Lindy/Zapier tutorials
 > Maps to: gap (positioning, not implementation)
 

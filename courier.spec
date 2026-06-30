@@ -1,9 +1,9 @@
-Name:           mailroom
+Name:           courier
 Version:        1.1.15
 Release:        1%{?dist}
 Summary:        Email toolkit for AI assistants and command-line scripting
 License:        MIT
-URL:            https://github.com/overseers-desk/mailroom
+URL:            https://github.com/overseers-desk/courier
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildArch:      noarch
 
@@ -21,7 +21,7 @@ Requires:       python3-dotenv >= 1.0.0
 Requires:       python3-sievelib >= 1.5
 
 %description
-Mailroom provides CLI commands for searching, reading, moving, flagging,
+Courier provides CLI commands for searching, reading, moving, flagging,
 and replying to emails over IMAP. It also offers an MCP (Model Context
 Protocol) server mode for integration with AI assistants.
 
@@ -45,26 +45,26 @@ python3 -c "
 import zipfile, sys
 with zipfile.ZipFile(sys.argv[1]) as whl:
     whl.extractall(sys.argv[2])
-" dist/mailroom-*.whl "${SITE_DIR}"
+" dist/courier-*.whl "${SITE_DIR}"
 
 # Create entry-point script
-cat > %{buildroot}/usr/bin/mailroom << 'ENTRY'
+cat > %{buildroot}/usr/bin/courier << 'ENTRY'
 #!/usr/bin/python3
-from mailroom.__main__ import main
+from courier.__main__ import main
 main()
 ENTRY
-chmod 755 %{buildroot}/usr/bin/mailroom
+chmod 755 %{buildroot}/usr/bin/courier
 
 # Install man page
-install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
+install -Dpm 644 debian/courier.1 %{buildroot}%{_mandir}/man1/courier.1
 
 %files
 %license LICENSE
 %doc README.md
-/usr/bin/mailroom
-/usr/lib/python*/site-packages/mailroom/
-/usr/lib/python*/site-packages/mailroom-*.dist-info/
-%{_mandir}/man1/mailroom.1*
+/usr/bin/courier
+/usr/lib/python*/site-packages/courier/
+/usr/lib/python*/site-packages/courier-*.dist-info/
+%{_mandir}/man1/courier.1*
 
 %changelog
 * Thu Jun 25 2026 Weiwu Zhang <a@colourful.land> - 1.1.15-1
@@ -113,8 +113,8 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
   against a redact-bearing block serve from cache in ~5 s instead of
   ~16 s, and the maildir path is dropped from redacted records to close
   that leakage.
-- Warnings from `mailroom.imap_client` are routed through syslog. On
-  systemd hosts the records are queryable via `journalctl -t mailroom`;
+- Warnings from `courier.imap_client` are routed through syslog. On
+  systemd hosts the records are queryable via `journalctl -t courier`;
   platforms with no reachable syslog socket fall back to stderr.
   Closes #39.
 - When `search` falls through to iterating every selectable folder, a
@@ -134,19 +134,19 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
   form. "identifier" was ambiguous against the project's other
   identifier-shaped fields (identity name, imap block name, smtp block
   name, message-id, uid). `--attachment` says exactly what it picks.
-  Migration: `mailroom save -f INBOX -u 100 -i Billete.pdf -o out.pdf`
-  → `mailroom save -f INBOX -u 100 --attachment Billete.pdf -o out.pdf`.
+  Migration: `courier save -f INBOX -u 100 -i Billete.pdf -o out.pdf`
+  → `courier save -f INBOX -u 100 --attachment Billete.pdf -o out.pdf`.
 - `--imap` remains the only spelling for the global IMAP-block selector;
   no short form.
 
 * Sun May 10 2026 Weiwu Zhang <a@colourful.land> - 1.1.8-1
 - `-i` is no longer a shorthand for `--imap`. Use `--imap NAME` at the
   top level. `-i` is now exclusively `save --identifier` (closes #36):
-  previously `mailroom -i acct save -f INBOX -u 100 -i "Billete.pdf"
+  previously `courier -i acct save -f INBOX -u 100 -i "Billete.pdf"
   -o out.pdf` failed because the argv preprocessor consumed
   `save -i "Billete.pdf"` as a second `--imap`. Removing the shorthand
   removes the collision at the source. Migration:
-  `mailroom -i NAME ...` → `mailroom --imap NAME ...`.
+  `courier -i NAME ...` → `courier --imap NAME ...`.
 - `-n/--limit` and `-f/--folder` are now chain-level: a trailing
   `-n N` or `-f FOLDER` after the last verb applies to every chained
   verb that doesn't set its own value (closes #34).
@@ -154,31 +154,31 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
   consistently exposed; thread matching uses strict-subject semantics
   (closes #11).
 - `install-claude-command` is now version-aware. It checks the
-  installed `mailroom.md` against the bundled one and prompts before
+  installed `courier.md` against the bundled one and prompts before
   overwriting; the `--force` flag is removed. The status nudge
   surfaces globally when registration is missing.
 
 * Wed May 06 2026 Weiwu Zhang <a@colourful.land> - 1.1.7-1
 - `search` and `read` repeat at the top level to run several operations
   in one invocation:
-      mailroom -A search "sergio" search "panedas" read -f INBOX -u 42
+      courier -A search "sergio" search "panedas" read -f INBOX -u 42
   Each operation gets its own outer key in the result, so per-keyword
   hit attribution is preserved. Output is JSON of shape
   `{op_key: {imap_name: result}}`, the same shape single-op `search`
   and `read` already produced.
-- The `batch` subcommand is removed. Anyone driving mailroom from a
-  script that ran `mailroom batch "search foo" "search bar"` should
-  switch to `mailroom search foo search bar`. The output shape is
+- The `batch` subcommand is removed. Anyone driving courier from a
+  script that ran `courier batch "search foo" "search bar"` should
+  switch to `courier search foo search bar`. The output shape is
   unchanged. Issue #34 tracks promoting `--limit` and `--folder` to
   chain-level so they apply to every chained verb.
 
 * Wed May 06 2026 Weiwu Zhang <a@colourful.land> - 1.1.6-1
 - New `install-claude-command` subcommand: copies the bundled Claude
-  Code command file into ~/.claude/commands/mailroom.md so Claude Code
-  recognises mailroom and routes email-related prompts through the CLI.
+  Code command file into ~/.claude/commands/courier.md so Claude Code
+  recognises courier and routes email-related prompts through the CLI.
   The file ships inside the Python package, so the same one-liner works
-  regardless of install method. `mailroom status` notes when ~/.claude
-  exists but mailroom is not yet registered.
+  regardless of install method. `courier status` notes when ~/.claude
+  exists but courier is not yet registered.
 - Plain-text bodies containing markdown tables or headings now auto-
   render an HTML alternative on send. The wire form goes as
   multipart/alternative with the original plain text first and rendered
@@ -186,13 +186,13 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
   still get the intended source. Closes #28.
 
 * Wed May 06 2026 Weiwu Zhang <a@colourful.land> - 1.1.5-1
-- `mailroom status` is now a connection-probe table rather than a
+- `courier status` is now a connection-probe table rather than a
   JSON inventory. Each [imap.NAME] runs a full IMAP login; each
   [smtp.NAME] runs EHLO + STARTTLS plus an authenticated login when
   credentials are configured. Output is a short aligned table
   answering "which servers are reachable right now". Template SMTP
   blocks (no own creds) stop at STARTTLS and are marked. Scripts
-  that parsed status JSON should switch to `mailroom list`. Closes #29.
+  that parsed status JSON should switch to `courier list`. Closes #29.
 
 * Wed May 06 2026 Weiwu Zhang <a@colourful.land> - 1.1.4-1
 - New per-account redact policy. An optional `redact = "rules.sieve"`
@@ -235,7 +235,7 @@ install -Dpm 644 debian/mailroom.1 %{buildroot}%{_mandir}/man1/mailroom.1
   identity's Sent folder, with Bcc stripped and Message-ID rewritten
 - New config-check subcommand validates cross-references and identity
   resolution without performing IMAP or SMTP traffic; the same warnings
-  surface on `mailroom`, `--help`, `status`, and `list-accounts`
+  surface on `courier`, `--help`, `status`, and `list-accounts`
 
 * Tue Apr 28 2026 Weiwu Zhang <a@colourful.land> - 1.1.0-1
 - Batch-first JSON output: all commands now wrap results under an operation

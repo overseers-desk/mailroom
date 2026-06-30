@@ -7,15 +7,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.imap_client import ImapClient
-from mailroom.models import Email, EmailAddress, EmailAttachment, EmailContent
-from mailroom.tools import register_tools
+from courier.imap_client import ImapClient
+from courier.models import Email, EmailAddress, EmailAttachment, EmailContent
+from courier.tools import register_tools
 
 
 # Patch the get_client_from_context function to use our mock client
 @pytest.fixture(autouse=True)
 def patch_get_client():
-    with patch("mailroom.tools.get_client_from_context") as mock_get_client:
+    with patch("courier.tools.get_client_from_context") as mock_get_client:
         yield mock_get_client
 
 
@@ -592,12 +592,12 @@ class TestExport:
 
 
 class TestExportRawCLI:
-    """Tests for `mailroom export --raw`."""
+    """Tests for `courier export --raw`."""
 
     def test_raw_writes_bytes_to_file(self, tmp_path):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         raw_bytes = b"From: a@x\r\nSubject: test\r\n\r\nbody\r\n"
@@ -610,7 +610,7 @@ class TestExportRawCLI:
         }
         out_file = tmp_path / "out.eml"
 
-        with patch("mailroom.__main__._make_client", return_value=client):
+        with patch("courier.__main__._make_client", return_value=client):
             result = runner.invoke(
                 app,
                 [
@@ -633,7 +633,7 @@ class TestExportRawCLI:
     def test_raw_streams_to_stdout(self):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         raw_bytes = b"From: a@x\r\nSubject: streamed\r\n\r\nbody\r\n"
@@ -645,7 +645,7 @@ class TestExportRawCLI:
             "subject": "streamed",
         }
 
-        with patch("mailroom.__main__._make_client", return_value=client):
+        with patch("courier.__main__._make_client", return_value=client):
             result = runner.invoke(
                 app,
                 [
@@ -668,13 +668,13 @@ class TestExportRawCLI:
     def test_raw_email_not_found(self, tmp_path):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         client = MagicMock()
         client.fetch_raw.return_value = None
 
-        with patch("mailroom.__main__._make_client", return_value=client):
+        with patch("courier.__main__._make_client", return_value=client):
             result = runner.invoke(
                 app,
                 [

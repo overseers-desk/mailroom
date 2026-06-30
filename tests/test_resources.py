@@ -6,14 +6,14 @@ from unittest import mock
 import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.resources import get_client_from_context, register_resources
+from courier.resources import get_client_from_context, register_resources
 
 # Directly patch the Context class
 original_get_current = getattr(Context, "get_current", None)
 
 
 class TestResources:
-    """Tests for mailroom.resources."""
+    """Tests for courier.resources."""
 
     def test_get_client_from_context(self):
         """Test getting IMAP client from context."""
@@ -279,7 +279,7 @@ class TestResources:
 
         try:
             # This should succeed if all resources have correct parameter definitions
-            from mailroom.resources import register_resources
+            from courier.resources import register_resources
 
             register_resources(real_mcp, mock.MagicMock())
 

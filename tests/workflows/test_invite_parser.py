@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pytest
 
-from mailroom.models import Email, EmailAddress, EmailAttachment, EmailContent
-from mailroom.workflows.invite_parser import (
+from courier.models import Email, EmailAddress, EmailAttachment, EmailContent
+from courier.workflows.invite_parser import (
     _extract_description,
     _extract_location,
     _extract_meeting_times,

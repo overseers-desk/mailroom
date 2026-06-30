@@ -1,4 +1,4 @@
-"""Tests for the `mailroom status` connection-probe table.
+"""Tests for the `courier status` connection-probe table.
 
 The CLI ``status`` command runs an IMAP login per [imap.NAME] and an
 EHLO + optional auth per [smtp.NAME] sequentially, then prints a
@@ -8,7 +8,7 @@ servers.
 
 from unittest.mock import MagicMock, patch
 
-from mailroom.__main__ import (
+from courier.__main__ import (
     _format_age,
     _print_status_table,
     _probe_all,
@@ -16,8 +16,8 @@ from mailroom.__main__ import (
     _probe_imap,
     _probe_smtp,
 )
-from mailroom.config import ImapBlock, LocalCacheConfig, MailroomConfig, SmtpConfig
-from mailroom.local_cache import EligibilityResult
+from courier.config import CourierConfig, ImapBlock, LocalCacheConfig, SmtpConfig
+from courier.local_cache import EligibilityResult
 
 
 def _imap_block(name: str = "acc") -> ImapBlock:
@@ -49,7 +49,7 @@ class TestProbeImap:
     """`_probe_imap` returns 'ok' on success and 'FAIL: ...' on connect error."""
 
     def test_ok_when_connect_succeeds(self):
-        with patch("mailroom.__main__.ImapClient") as mock_cls:
+        with patch("courier.__main__.ImapClient") as mock_cls:
             instance = MagicMock()
             mock_cls.return_value = instance
             assert _probe_imap(_imap_block()) == "ok"
@@ -57,7 +57,7 @@ class TestProbeImap:
             instance.disconnect.assert_called_once()
 
     def test_fail_message_carries_exception_text(self):
-        with patch("mailroom.__main__.ImapClient") as mock_cls:
+        with patch("courier.__main__.ImapClient") as mock_cls:
             instance = MagicMock()
             instance.connect.side_effect = ConnectionError("login refused")
             mock_cls.return_value = instance
@@ -106,13 +106,13 @@ class TestProbeAll:
     """`_probe_all` runs probes sequentially in config order, IMAP then SMTP."""
 
     def test_orders_imap_then_smtp(self):
-        cfg = MailroomConfig(
+        cfg = CourierConfig(
             imap_blocks={"a": _imap_block("a"), "b": _imap_block("b")},
             smtp_blocks={"out": _smtp_block("out")},
         )
         with (
-            patch("mailroom.__main__._probe_imap", return_value="ok"),
-            patch("mailroom.__main__._probe_smtp", return_value="ok"),
+            patch("courier.__main__._probe_imap", return_value="ok"),
+            patch("courier.__main__._probe_smtp", return_value="ok"),
         ):
             rows = _probe_all(cfg)
         kinds = [r[1] for r in rows]
@@ -127,7 +127,7 @@ class TestProbeAll:
         probe 2 reads that flag at entry, probe 2 must see it set.
         Under parallel dispatch this property is not guaranteed.
         """
-        cfg = MailroomConfig(
+        cfg = CourierConfig(
             imap_blocks={"a": _imap_block("a"), "b": _imap_block("b")},
             smtp_blocks={},
         )
@@ -137,7 +137,7 @@ class TestProbeAll:
             order.append(block.host)
             return "ok"
 
-        with patch("mailroom.__main__._probe_imap", side_effect=probe):
+        with patch("courier.__main__._probe_imap", side_effect=probe):
             _probe_all(cfg)
 
         # Both probes ran; the sequence is the config order.
@@ -155,7 +155,7 @@ class TestPrintStatusTable:
         _print_status_table(rows)
         out = capsys.readouterr().out.splitlines()
         # First line is the version stamp; second is the header; rest are rows.
-        assert out[0].startswith("mailroom ")
+        assert out[0].startswith("courier ")
         assert "NAME" in out[1] and "STATUS" in out[1]
         # Each row carries every field, and every row has the same total
         # width as the header (the fixed-width fmt string pads the last
@@ -198,9 +198,9 @@ def _opted_in_block() -> ImapBlock:
     )
 
 
-def _cache_cfg(block: ImapBlock, max_staleness_seconds: int = 4000) -> MailroomConfig:
+def _cache_cfg(block: ImapBlock, max_staleness_seconds: int = 4000) -> CourierConfig:
     """A config whose [local_cache] table opts the given block in."""
-    return MailroomConfig(
+    return CourierConfig(
         imap_blocks={"a": block},
         smtp_blocks={},
         local_cache=LocalCacheConfig(max_staleness_seconds=max_staleness_seconds),
@@ -216,7 +216,7 @@ class TestProbeCache:
     """
 
     def test_dash_when_no_local_cache_configured(self):
-        cfg = MailroomConfig(imap_blocks={"a": _opted_in_block()}, smtp_blocks={})
+        cfg = CourierConfig(imap_blocks={"a": _opted_in_block()}, smtp_blocks={})
         assert _probe_cache(cfg, cfg.imap_blocks["a"]) == "-"
 
     def test_dash_when_block_has_no_maildir(self):
@@ -233,7 +233,7 @@ class TestProbeCache:
         backend.index_mtime_iso.return_value = datetime.now(timezone.utc).isoformat(
             timespec="seconds"
         )
-        with patch("mailroom.__main__._get_mu_backend", return_value=backend):
+        with patch("courier.__main__._get_mu_backend", return_value=backend):
             cell = _probe_cache(cfg, block)
         assert cell.startswith("ok (") and cell.endswith("old)")
 
@@ -246,7 +246,7 @@ class TestProbeCache:
         backend.is_eligible.return_value = EligibilityResult(False, "stale")
         old = datetime.now(timezone.utc) - timedelta(days=2)
         backend.index_mtime_iso.return_value = old.isoformat(timespec="seconds")
-        with patch("mailroom.__main__._get_mu_backend", return_value=backend):
+        with patch("courier.__main__._get_mu_backend", return_value=backend):
             cell = _probe_cache(cfg, block)
         assert cell.startswith("STALE (") and "max 1h" in cell
 
@@ -255,7 +255,7 @@ class TestProbeCache:
         cfg = _cache_cfg(block)
         backend = MagicMock()
         backend.is_eligible.return_value = EligibilityResult(False, "mu_missing")
-        with patch("mailroom.__main__._get_mu_backend", return_value=backend):
+        with patch("courier.__main__._get_mu_backend", return_value=backend):
             assert _probe_cache(cfg, block) == "mu not found"
 
     def test_db_missing_reason(self):
@@ -263,5 +263,5 @@ class TestProbeCache:
         cfg = _cache_cfg(block)
         backend = MagicMock()
         backend.is_eligible.return_value = EligibilityResult(False, "db_missing")
-        with patch("mailroom.__main__._get_mu_backend", return_value=backend):
+        with patch("courier.__main__._get_mu_backend", return_value=backend):
             assert _probe_cache(cfg, block) == "no index"

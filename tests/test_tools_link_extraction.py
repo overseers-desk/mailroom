@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mailroom.models import Email, EmailAddress, EmailContent
+from courier.models import Email, EmailAddress, EmailContent
 
 
 def _make_email(html):
@@ -203,7 +203,7 @@ class TestLinksTool:
         """Test extracting links from an email with HTML content."""
         from mcp.server.fastmcp import FastMCP
 
-        from mailroom.tools import register_tools
+        from courier.tools import register_tools
 
         # Create mock email with HTML content
         html_content = """
@@ -261,7 +261,7 @@ class TestLinksTool:
         """Test extracting links from multiple emails."""
         from mcp.server.fastmcp import FastMCP
 
-        from mailroom.tools import register_tools
+        from courier.tools import register_tools
 
         # Create two mock emails
         html1 = '<html><body><a href="https://example.com">Link 1</a></body></html>'
@@ -327,7 +327,7 @@ class TestLinksTool:
         """Test error when email is not found."""
         from mcp.server.fastmcp import FastMCP
 
-        from mailroom.tools import register_tools
+        from courier.tools import register_tools
 
         # Set up mock client that returns None
         mock_client = MagicMock()
@@ -361,7 +361,7 @@ class TestLinksTool:
         """Test error when email has no HTML content."""
         from mcp.server.fastmcp import FastMCP
 
-        from mailroom.tools import register_tools
+        from courier.tools import register_tools
 
         # Create mock email with only plain text
         mock_email = Email(
@@ -404,7 +404,7 @@ class TestLinksTool:
         """Test with HTML content that has no links."""
         from mcp.server.fastmcp import FastMCP
 
-        from mailroom.tools import register_tools
+        from courier.tools import register_tools
 
         # Create mock email with HTML but no links
         mock_email = Email(
@@ -449,7 +449,7 @@ class TestLinksTool:
         """Test that duplicate URLs are deduplicated per email."""
         from mcp.server.fastmcp import FastMCP
 
-        from mailroom.tools import register_tools
+        from courier.tools import register_tools
 
         # Create mock email with duplicate links
         html_content = """

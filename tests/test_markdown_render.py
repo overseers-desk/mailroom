@@ -1,6 +1,6 @@
 """Tests for the markdown auto-render trigger and renderer."""
 
-from mailroom.markdown_render import needs_html, render_html
+from courier.markdown_render import needs_html, render_html
 
 
 def test_table_with_separator_triggers():

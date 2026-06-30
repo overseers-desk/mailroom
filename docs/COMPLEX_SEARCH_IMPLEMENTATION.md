@@ -1,6 +1,6 @@
 # Gmail-Style Search Query Syntax
 
-Mailroom uses a Gmail-inspired query language for email search. Queries work identically across the CLI, MCP tool, and MCP resource interfaces.
+Courier uses a Gmail-inspired query language for email search. Queries work identically across the CLI, MCP tool, and MCP resource interfaces.
 
 ## Quick reference
 
@@ -28,7 +28,7 @@ Mailroom uses a Gmail-inspired query language for email search. Queries work ide
 Tokens without a prefix search the full message text:
 
 ```bash
-mailroom search "meeting notes"
+courier search "meeting notes"
 # → IMAP: TEXT "meeting notes"
 ```
 
@@ -37,7 +37,7 @@ mailroom search "meeting notes"
 Space-separated terms are implicitly AND-ed:
 
 ```bash
-mailroom search "from:alice subject:invoice is:unread"
+courier search "from:alice subject:invoice is:unread"
 # → IMAP: FROM alice SUBJECT invoice UNSEEN
 ```
 
@@ -46,22 +46,22 @@ mailroom search "from:alice subject:invoice is:unread"
 **OR** between terms:
 
 ```bash
-mailroom search "from:alice or from:bob"
+courier search "from:alice or from:bob"
 # → IMAP: OR FROM alice FROM bob
 ```
 
 Chained OR right-associates:
 
 ```bash
-mailroom search "from:a or from:b or from:c"
+courier search "from:a or from:b or from:c"
 # → IMAP: OR FROM a OR FROM b FROM c
 ```
 
 **NOT** with `-` prefix or `not` keyword:
 
 ```bash
-mailroom search "-from:alice"
-mailroom search "not is:read"
+courier search "-from:alice"
+courier search "not is:read"
 ```
 
 ## Dates
@@ -69,14 +69,14 @@ mailroom search "not is:read"
 ISO format (`YYYY-MM-DD`) and slash format (`YYYY/MM/DD`) both work:
 
 ```bash
-mailroom search "after:2025-03-01 before:2025-04-01"
+courier search "after:2025-03-01 before:2025-04-01"
 ```
 
 Relative dates use `d` (days), `w` (weeks), `m` (months):
 
 ```bash
-mailroom search "newer:3d"     # last 3 days
-mailroom search "older:2w"     # older than 2 weeks
+courier search "newer:3d"     # last 3 days
+courier search "older:2w"     # older than 2 weeks
 ```
 
 `newer_than:` and `older_than:` are accepted as synonyms.
@@ -96,8 +96,8 @@ When the entire query is one of these words, it maps to a predefined search:
 Use double or single quotes for multi-word values:
 
 ```bash
-mailroom search 'subject:"hotel booking"'
-mailroom search "from:'Alice Smith'"
+courier search 'subject:"hotel booking"'
+courier search "from:'Alice Smith'"
 ```
 
 ## Raw IMAP passthrough
@@ -105,11 +105,11 @@ mailroom search "from:'Alice Smith'"
 Prefix with `imap:` to send a raw IMAP SEARCH expression:
 
 ```bash
-mailroom search 'imap:OR TEXT "Edinburgh" OR TEXT "Berlin" TEXT "Munich"'
+courier search 'imap:OR TEXT "Edinburgh" OR TEXT "Berlin" TEXT "Munich"'
 ```
 
 This bypasses the query parser entirely and passes the expression to the IMAP server in Polish (prefix) notation.
 
 ## Implementation
 
-The parser lives in `mailroom/query_parser.py`. It tokenizes the query with `shlex.split()`, classifies each token (prefix:value, keyword, bare word, operator), and assembles a flat list compatible with `imapclient.IMAPClient.search()`.
+The parser lives in `courier/query_parser.py`. It tokenizes the query with `shlex.split()`, classifies each token (prefix:value, keyword, bare word, operator), and assembles a flat list compatible with `imapclient.IMAPClient.search()`.

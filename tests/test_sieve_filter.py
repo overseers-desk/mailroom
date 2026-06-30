@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from mailroom.models import Email, EmailAddress
-from mailroom.sieve_filter import compile_policy
+from courier.models import Email, EmailAddress
+from courier.sieve_filter import compile_policy
 
 
 def _write_sieve(dirpath: str, body: str, name: str = "policy.sieve") -> str:
@@ -37,7 +37,7 @@ class TestCompilePolicySupportedSubset:
     def test_address_is_single_header(self, tmp_path):
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             'if address :is "from" "lawyer@firm.com" { redact; }\n',
         )
         policy = compile_policy(path)
@@ -51,7 +51,7 @@ class TestCompilePolicySupportedSubset:
         """
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             'if address :is ["from","to","cc"] '
             '["lawyer@firm.com","counsel@firm.com"] { redact; }\n',
         )
@@ -69,7 +69,7 @@ class TestCompilePolicySupportedSubset:
         """
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             'if not address :is ["from","to","cc"] '
             '"director@example.com" { redact; }\n',
         )
@@ -80,7 +80,7 @@ class TestCompilePolicySupportedSubset:
     def test_anyof_combinator(self, tmp_path):
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             "if anyof("
             '  address :is "from" "a@x",'
             '  header :contains "Subject" "secret"'
@@ -94,7 +94,7 @@ class TestCompilePolicySupportedSubset:
     def test_allof_combinator(self, tmp_path):
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             "if allof("
             '  address :is "from" "a@x",'
             '  header :contains "Subject" "confidential"'
@@ -109,7 +109,7 @@ class TestCompilePolicySupportedSubset:
         """``:matches "*@example.com"`` redacts every example.com address."""
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             'if address :matches "from" "*@example.com" { redact; }\n',
         )
         policy = compile_policy(path)
@@ -130,7 +130,7 @@ class TestCompilePolicyFailureClosed:
             compile_policy(path)
 
     def test_no_if_blocks(self, tmp_path):
-        path = _write_sieve(str(tmp_path), 'require ["mailroom-policy"];\n')
+        path = _write_sieve(str(tmp_path), 'require ["courier-policy"];\n')
         with pytest.raises(ValueError, match="no `if"):
             compile_policy(path)
 
@@ -147,7 +147,7 @@ class TestCompilePolicyFailureClosed:
         """``body`` is in the deferred set, so it must be rejected."""
         path = _write_sieve(
             str(tmp_path),
-            'require ["body","mailroom-policy"];\n'
+            'require ["body","courier-policy"];\n'
             'if body :contains "secret" { redact; }\n',
         )
         with pytest.raises(ValueError, match="outside the supported subset"):
@@ -157,7 +157,7 @@ class TestCompilePolicyFailureClosed:
         """``:regex`` is deferred and must be rejected."""
         path = _write_sieve(
             str(tmp_path),
-            'require ["regex","mailroom-policy"];\n'
+            'require ["regex","courier-policy"];\n'
             'if address :regex "from" ".*@firm\\\\.com" { redact; }\n',
         )
         with pytest.raises(ValueError, match="match-type"):
@@ -167,7 +167,7 @@ class TestCompilePolicyFailureClosed:
         """address-test on a non-address header is rejected by the walk."""
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             'if address :is "subject" "x@y" { redact; }\n',
         )
         with pytest.raises(ValueError, match="address test on header"):
@@ -176,7 +176,7 @@ class TestCompilePolicyFailureClosed:
     def test_interior_glob_rejected(self, tmp_path):
         path = _write_sieve(
             str(tmp_path),
-            'require ["mailroom-policy"];\n'
+            'require ["courier-policy"];\n'
             'if address :matches "from" "a*b@example.com" { redact; }\n',
         )
         with pytest.raises(ValueError, match="interior"):

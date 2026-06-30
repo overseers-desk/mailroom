@@ -15,11 +15,11 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from mailroom.__main__ import app
-from mailroom.config import (
+from courier.__main__ import app
+from courier.config import (
+    CourierConfig,
     Identity,
     ImapBlock,
-    MailroomConfig,
     SmtpConfig,
 )
 
@@ -36,7 +36,7 @@ def _draft_bytes(from_addr: str = "alice@x.com") -> bytes:
     return msg.as_bytes()
 
 
-def _cfg_with_identities() -> MailroomConfig:
+def _cfg_with_identities() -> CourierConfig:
     """Default test config: non-Gmail SMTP so FCC is exercised by save_sent='auto'.
 
     Switching to Fastmail-style means resolve_save_sent() returns True (the
@@ -50,7 +50,7 @@ def _cfg_with_identities() -> MailroomConfig:
         password="p",
         default_smtp="fast",
     )
-    return MailroomConfig(
+    return CourierConfig(
         imap_blocks={"acct": block},
         _default_imap="acct",
         identities={
@@ -93,10 +93,10 @@ class TestSendDraftHappyPath:
         cfg = _cfg_with_identities()
         client = _client_with_draft()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(_draft_bytes(), _build_send_result()),
             ) as send_mock,
         ):
@@ -115,10 +115,10 @@ class TestSendDraftHappyPath:
         cfg = _cfg_with_identities()
         client = _client_with_draft()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(_draft_bytes(), _build_send_result()),
             ),
         ):
@@ -137,9 +137,9 @@ class TestSendDraftUnknownFrom:
         cfg = _cfg_with_identities()
         client = _client_with_draft(from_addr="impostor@evil.com")
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(app, ["send-draft", "-f", "Drafts", "-u", "42"])
         assert result.exit_code == 1
@@ -174,13 +174,13 @@ class TestSendDraftDryRun:
                 smtp_calls.append(("quit",))
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport._pick_default_transport",
+                "courier.smtp_transport._pick_default_transport",
                 return_value=_FakeSMTP,
             ),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -208,9 +208,9 @@ class TestSendDraftBcc:
             return (_draft_bytes(), _build_send_result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,

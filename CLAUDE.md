@@ -1,22 +1,22 @@
-# Mailroom Server Development Guide
+# Courier Server Development Guide
 
 ## Versioning and Packaging
-- Version is defined in `pyproject.toml` (single source of truth) and mirrored in `mailroom/__init__.py`, `mailroom/__main__.py`, and `mailroom/mcp_server.py`. Do not hardcode version numbers in documentation — use generic references like "latest" or `<version>` placeholders.
+- Version is defined in `pyproject.toml` (single source of truth) and mirrored in `courier/__init__.py`, `courier/__main__.py`, and `courier/mcp_server.py`. Do not hardcode version numbers in documentation — use generic references like "latest" or `<version>` placeholders.
 - Do not bump the version unless the user asks for it.
-- Packaging: `debian/` for .deb, `mailroom.spec` for .rpm. The Homebrew formula lives in the `overseers-desk/homebrew-ot` tap repo at `Formula/mailroom.rb`; it points at this repo's release tarball and sha256.
+- Packaging: `debian/` for .deb, `courier.spec` for .rpm. The Homebrew formula lives in the `overseers-desk/homebrew-ot` tap repo at `Formula/courier.rb`; it points at this repo's release tarball and sha256.
 
 ## What "release" means in this project
 When the user asks to "do the release", "release X.Y.Z", or "release now", they mean the **complete** end-to-end publication, not source-side prep. Do all of the following without asking for confirmation between steps; ask only if a step actually fails:
 
-1. **Commit** any uncommitted source/test/packaging changes from this session, in logically grouped commits (feature → version bump → packaging metadata sync). Match the commit-message style of the prior release commits (see `git log -- debian/changelog mailroom.spec`).
+1. **Commit** any uncommitted source/test/packaging changes from this session, in logically grouped commits (feature → version bump → packaging metadata sync). Match the commit-message style of the prior release commits (see `git log -- debian/changelog courier.spec`).
 2. **Push** to `origin/main`.
 3. **Tag** `vX.Y.Z` and **push the tag**.
-4. **Create the GitHub release**: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."`. Release notes summarise the user-visible changes and copy install plus upgrade commands verbatim from `docs/INSTALLATION.md` (the single source of truth for both). Carry **Install** (first-time users) and **Upgrade** (returning users) as separate sections, not one block: a returning macOS user running just `brew install mailroom` is told "already installed and up-to-date" and never reaches the new version, because Homebrew's auto-update does not pull third-party taps until `brew update` is run first. If `docs/INSTALLATION.md` does not yet cover a sequence the release needs (e.g. a new platform, a new upgrade caveat), update that file first and propagate to the release notes. The verbatim copy is what makes the duplication safe: divergence between the two is a doc bug to fix in `docs/INSTALLATION.md`. Skip the brew section for any release where macOS install is known broken (e.g. issue #26 was open against v1.1.2); only add it back once a Tahoe install has been verified end-to-end. Do not invent platforms (no `apt install mailroom` one-liner unless we host an APT repo).
+4. **Create the GitHub release**: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."`. Release notes summarise the user-visible changes and copy install plus upgrade commands verbatim from `docs/INSTALLATION.md` (the single source of truth for both). Carry **Install** (first-time users) and **Upgrade** (returning users) as separate sections, not one block: a returning macOS user running just `brew install courier` is told "already installed and up-to-date" and never reaches the new version, because Homebrew's auto-update does not pull third-party taps until `brew update` is run first. If `docs/INSTALLATION.md` does not yet cover a sequence the release needs (e.g. a new platform, a new upgrade caveat), update that file first and propagate to the release notes. The verbatim copy is what makes the duplication safe: divergence between the two is a doc bug to fix in `docs/INSTALLATION.md`. Skip the brew section for any release where macOS install is known broken (e.g. issue #26 was open against v1.1.2); only add it back once a Tahoe install has been verified end-to-end. Do not invent platforms (no `apt install courier` one-liner unless we host an APT repo).
 5. **Build BOTH `.deb` AND `.rpm`** — never just one. The host has both `dpkg-buildpackage` and `rpmbuild` available; check with `which` if unsure, do not assume.
-   - `.deb`: from project root, `dpkg-buildpackage -us -uc -b` → artifact lands at `../mailroom_X.Y.Z_all.deb`.
-   - `.rpm`: download the GitHub tarball to `~/rpmbuild/SOURCES/mailroom-X.Y.Z.tar.gz`, then `rpmbuild -bb mailroom.spec` → artifact lands at `~/rpmbuild/RPMS/noarch/mailroom-X.Y.Z-1.noarch.rpm`.
+   - `.deb`: from project root, `dpkg-buildpackage -us -uc -b` → artifact lands at `../courier_X.Y.Z_all.deb`.
+   - `.rpm`: download the GitHub tarball to `~/rpmbuild/SOURCES/courier-X.Y.Z.tar.gz`, then `rpmbuild -bb courier.spec` → artifact lands at `~/rpmbuild/RPMS/noarch/courier-X.Y.Z-1.noarch.rpm`.
 6. **Upload BOTH artifacts** to the GitHub release: `gh release upload vX.Y.Z <deb> <rpm>`. Verify with `gh release view vX.Y.Z --json assets --jq '[.assets[].name]'` — both filenames must be present before considering the release done.
-7. **Bump the Homebrew formula** in the `overseers-desk/homebrew-ot` tap repo. Once this repo's GitHub release is published, compute the sha256 of the release tarball (`curl -sL <url> | sha256sum`) and update the `url` and `sha256` fields in `Formula/mailroom.rb` over in the `overseers-desk/homebrew-ot` repo, then commit and push there. The formula is not part of this repo.
+7. **Bump the Homebrew formula** in the `overseers-desk/homebrew-ot` tap repo. Once this repo's GitHub release is published, compute the sha256 of the release tarball (`curl -sL <url> | sha256sum`) and update the `url` and `sha256` fields in `Formula/courier.rb` over in the `overseers-desk/homebrew-ot` repo, then commit and push there. The formula is not part of this repo.
 8. **Sanity-check** the prior release for parity: `gh release view v<previous> --json assets` — the new release should have at least the same asset types (deb + rpm at minimum) the previous one had. If the new release is missing an asset type, it is incomplete.
 
 Do **not** report the release as done if any of the above is missing. Do not stop at "the .deb is built, want me to upload?" — the user explicitly does not want that hand-off; the upload is part of the release.
@@ -41,12 +41,12 @@ Do **not** report the release as done if any of the above is missing. Do not sto
 - Run all tests: `uv run pytest`
 - Run single test: `uv run pytest tests/test_file.py::TestClass::test_function -v`
 - Run with coverage: `uv run pytest --cov`
-- Run MCP server: `mailroom mcp`
-- Development mode: `mailroom mcp --dev`
-- One-line execution with dependencies: `uvx mailroom mcp`
+- Run MCP server: `courier mcp`
+- Development mode: `courier mcp --dev`
+- One-line execution with dependencies: `uvx courier mcp`
 
 ## Code Style Guidelines
-- **CI gate**: the `Code Quality Checks` workflow runs `./scripts/run_checks.sh --ci --skip-integration`, which chains ruff, black, isort (black profile), mypy (non-blocking), and pytest with coverage. Before declaring a branch green, run that script locally; partial substitutes (just black, just pytest) miss real failures. Past incident: an inline import in `mailroom/__main__.py` was black-clean but isort-dirty, so a session that ran black + pytest only declared the branch ready, the merge to main turned CI red, and a follow-up commit was needed to fix it.
+- **CI gate**: the `Code Quality Checks` workflow runs `./scripts/run_checks.sh --ci --skip-integration`, which chains ruff, black, isort (black profile), mypy (non-blocking), and pytest with coverage. Before declaring a branch green, run that script locally; partial substitutes (just black, just pytest) miss real failures. Past incident: an inline import in `courier/__main__.py` was black-clean but isort-dirty, so a session that ran black + pytest only declared the branch ready, the merge to main turned CI red, and a follow-up commit was needed to fix it.
 - Use Black with 88 character line length
 - Imports: Use isort with Black profile
 - Types: All functions must have type hints (mypy enforces this)
@@ -74,7 +74,7 @@ When working on tasks from GitHub Issues, follow this workflow:
    - Write tests first that verify the desired functionality
    - Implement the feature until all tests pass
    - Refactor code while maintaining test coverage
-   - Run full test suite to check for regressions: `uv run pytest --cov=mailroom`
+   - Run full test suite to check for regressions: `uv run pytest --cov=courier`
 
 4. **Completing an Issue**:
    - Create a pull request that references the issue: `gh pr create --title "[TITLE]" --body "Closes #[NUMBER]"`
@@ -118,7 +118,7 @@ Priority labels follow the format `priority:X` where X is a number starting from
 
 ## Integration Testing
 
-Integration tests verify that the Mailroom server works correctly with real email services. These tests require valid credentials and network connectivity to external services.
+Integration tests verify that the Courier server works correctly with real email services. These tests require valid credentials and network connectivity to external services.
 
 ### Environment Setup for Integration Tests
 
@@ -149,17 +149,17 @@ OAuth2 tokens expire periodically. If integration tests fail with authentication
 
 1. **Check if token refresh is needed**:
    ```bash
-   uv run python -m mailroom.oauth2 check-token --config config.toml
+   uv run python -m courier.oauth2 check-token --config config.toml
    ```
 
 2. **Refresh the token if expired**:
    ```bash
-   uv run python -m mailroom.auth_setup refresh-token --config config.toml
+   uv run python -m courier.auth_setup refresh-token --config config.toml
    ```
 
 3. **Generate a new token if refresh fails**:
    ```bash
-   uv run python -m mailroom.auth_setup generate-token --config config.toml
+   uv run python -m courier.auth_setup generate-token --config config.toml
    ```
 
 ### Running Integration Tests
@@ -212,7 +212,7 @@ When working with AI assistants or development tools that use credit-based syste
 ### Minimize Tool Use
 1. **Batch Commands**: Run fewer, more comprehensive commands rather than many small ones.
    - Run all tests at once: `uv run pytest` instead of testing individual files sequentially
-   - Use coverage reports to identify issues in one pass: `uv run pytest --cov=mailroom`
+   - Use coverage reports to identify issues in one pass: `uv run pytest --cov=courier`
    
 2. **Strategic Command Execution**:
    - Ask the user to run commands that will save many tool calls over time

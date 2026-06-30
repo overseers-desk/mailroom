@@ -5,7 +5,7 @@ SPAR-A prompt, so the Message-ID has to appear there for the agent to thread
 a reply onto the parent.
 """
 
-from mailroom.__main__ import _format_chain_oneline, _format_chain_text
+from courier.__main__ import _format_chain_oneline, _format_chain_text
 
 
 def _hit(message_id: str = "<m@example.com>") -> dict:

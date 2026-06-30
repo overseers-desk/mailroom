@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mailroom.config import ImapBlock
-from mailroom.imap_client import ImapClient
+from courier.config import ImapBlock
+from courier.imap_client import ImapClient
 
 
 class TestDraftsFunctionality:
@@ -97,7 +97,7 @@ class TestDraftsFunctionality:
         drafts_folder = mock_imap_client._get_drafts_folder()
         assert drafts_folder == "INBOX"
 
-    @patch("mailroom.imap_client.logger")
+    @patch("courier.imap_client.logger")
     def test_save_draft_mime_success(
         self, mock_logger, mock_imap_client, sample_mime_message
     ):
@@ -114,7 +114,7 @@ class TestDraftsFunctionality:
         assert uid == 5678
         mock_logger.debug.assert_called_with("Draft saved with UID: 5678")
 
-    @patch("mailroom.imap_client.logger")
+    @patch("courier.imap_client.logger")
     def test_save_draft_mime_no_appenduid(
         self, mock_logger, mock_imap_client, sample_mime_message
     ):
@@ -133,7 +133,7 @@ class TestDraftsFunctionality:
             "Could not extract UID from append response: b'OK'"
         )
 
-    @patch("mailroom.imap_client.logger")
+    @patch("courier.imap_client.logger")
     def test_save_draft_mime_error(
         self, mock_logger, mock_imap_client, sample_mime_message
     ):

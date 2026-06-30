@@ -4,7 +4,7 @@ Quick test to verify the Gmail-style search query parser works correctly.
 This script tests parsing without requiring an actual IMAP connection.
 """
 
-from mailroom.query_parser import parse_query
+from courier.query_parser import parse_query
 
 
 def test_example_queries():

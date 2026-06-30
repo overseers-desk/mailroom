@@ -9,7 +9,7 @@ from unittest import mock
 
 import pytest
 
-from mailroom.oauth2_config import OAuth2Config
+from courier.oauth2_config import OAuth2Config
 
 
 @pytest.fixture

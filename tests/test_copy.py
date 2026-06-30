@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.config import ImapBlock
-from mailroom.imap_client import ImapClient, copy_email_between_imap_blocks
-from mailroom.tools import register_tools
+from courier.config import ImapBlock
+from courier.imap_client import ImapClient, copy_email_between_imap_blocks
+from courier.tools import register_tools
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -307,9 +307,9 @@ class TestCopyTool:
         }
 
         with (
-            patch("mailroom.tools.get_client_from_context") as gc,
+            patch("courier.tools.get_client_from_context") as gc,
             patch(
-                "mailroom.imap_client.copy_email_between_imap_blocks",
+                "courier.imap_client.copy_email_between_imap_blocks",
                 return_value=success_result,
             ),
         ):
@@ -338,9 +338,9 @@ class TestCopyTool:
         }
 
         with (
-            patch("mailroom.tools.get_client_from_context") as gc,
+            patch("courier.tools.get_client_from_context") as gc,
             patch(
-                "mailroom.imap_client.copy_email_between_imap_blocks",
+                "courier.imap_client.copy_email_between_imap_blocks",
                 return_value=move_result,
             ),
         ):
@@ -363,9 +363,9 @@ class TestCopyTool:
         }
 
         with (
-            patch("mailroom.tools.get_client_from_context") as gc,
+            patch("courier.tools.get_client_from_context") as gc,
             patch(
-                "mailroom.imap_client.copy_email_between_imap_blocks",
+                "courier.imap_client.copy_email_between_imap_blocks",
                 return_value=fail_result,
             ),
         ):
@@ -380,9 +380,9 @@ class TestCopyTool:
         copy_fn = stored["copy"]
 
         with (
-            patch("mailroom.tools.get_client_from_context") as gc,
+            patch("courier.tools.get_client_from_context") as gc,
             patch(
-                "mailroom.imap_client.copy_email_between_imap_blocks",
+                "courier.imap_client.copy_email_between_imap_blocks",
                 side_effect=Exception("connection lost"),
             ),
         ):

@@ -7,7 +7,7 @@ from typing import Tuple
 
 import requests
 
-from mailroom.config import OAuth2Config
+from courier.config import OAuth2Config
 
 logger = logging.getLogger(__name__)
 

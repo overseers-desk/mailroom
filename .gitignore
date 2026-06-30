@@ -79,10 +79,10 @@ mcp-cli/
 debian/.debhelper/
 debian/debhelper-build-stamp
 debian/files
-debian/mailroom.postinst.debhelper
-debian/mailroom.prerm.debhelper
-debian/mailroom.substvars
-debian/mailroom/
+debian/courier.postinst.debhelper
+debian/courier.prerm.debhelper
+debian/courier.substvars
+debian/courier/
 .pybuild/
 
 # RPM build artifacts

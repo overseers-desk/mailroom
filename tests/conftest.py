@@ -1,4 +1,4 @@
-"""Pytest fixtures for Mailroom tests."""
+"""Pytest fixtures for Courier tests."""
 
 import datetime
 import email
@@ -38,9 +38,9 @@ except ImportError:
         return None
 
 
-from mailroom.config import Identity, ImapBlock, MailroomConfig, OAuth2Config
-from mailroom.imap_client import ImapClient
-from mailroom.models import Email, EmailAddress, EmailContent
+from courier.config import CourierConfig, Identity, ImapBlock, OAuth2Config
+from courier.imap_client import ImapClient
+from courier.models import Email, EmailAddress, EmailContent
 
 
 def patch_default_cli_config(username: str = "me@example.com"):
@@ -53,7 +53,7 @@ def patch_default_cli_config(username: str = "me@example.com"):
     Includes a default identity so ``resolve_identity_for_send`` succeeds
     (under (ii) a block with no identities is read-only for sending).
     """
-    cfg = MailroomConfig(
+    cfg = CourierConfig(
         imap_blocks={
             "default": ImapBlock(
                 host="imap.example.com",
@@ -67,7 +67,7 @@ def patch_default_cli_config(username: str = "me@example.com"):
             "default": Identity(imap="default", address=username),
         },
     )
-    return patch("mailroom.__main__.load_config", return_value=cfg)
+    return patch("courier.__main__.load_config", return_value=cfg)
 
 
 # Configure logging
@@ -89,14 +89,14 @@ def pytest_addoption(parser):
 def _silence_claude_registration_nudge(monkeypatch):
     """Pin the install-claude-command nudge to silent for all tests.
 
-    The CLI prints a stderr note when ``~/.claude/commands/mailroom.md``
+    The CLI prints a stderr note when ``~/.claude/commands/courier.md``
     exists at a different version than the source. Click's ``CliRunner``
     defaults to ``mix_stderr=True``, so the note ends up concatenated into
     ``result.output`` and breaks tests that parse stdout as JSON. Tests
     must not depend on the developer's local ``~/.claude`` state.
     """
     monkeypatch.setattr(
-        "mailroom.__main__._claude_registration_status",
+        "courier.__main__._claude_registration_status",
         lambda: None,
     )
 

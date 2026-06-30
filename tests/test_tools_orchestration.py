@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mailroom.models import Email, EmailAddress, EmailContent
-from mailroom.workflows.meeting_reply import process_meeting_invite_workflow
+from courier.models import Email, EmailAddress, EmailContent
+from courier.workflows.meeting_reply import process_meeting_invite_workflow
 
 
 class TestAcceptInviteWorkflow:

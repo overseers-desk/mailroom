@@ -9,9 +9,9 @@ from unittest.mock import patch
 
 import pytest
 
-from mailroom.config import ImapBlock, LocalCacheConfig
-from mailroom.local_cache import MuBackend, MuFailure
-from mailroom.query_parser import UntranslatableQuery
+from courier.config import ImapBlock, LocalCacheConfig
+from courier.local_cache import MuBackend, MuFailure
+from courier.query_parser import UntranslatableQuery
 
 
 def _make_block(maildir: str = "/var/local/mail/work") -> ImapBlock:
@@ -43,7 +43,7 @@ class TestMuBackendIsEligible:
         muhome = _make_xapian_dir(tmp_path)
         cfg = LocalCacheConfig(mu_index=muhome)
         backend = MuBackend(cfg)
-        monkeypatch.setattr("mailroom.local_cache.shutil.which", lambda _: None)
+        monkeypatch.setattr("courier.local_cache.shutil.which", lambda _: None)
 
         result = backend.is_eligible(_make_block())
 
@@ -58,9 +58,7 @@ class TestMuBackendIsEligible:
         # No xapian subdir created.
         cfg = LocalCacheConfig(mu_index=str(muhome))
         backend = MuBackend(cfg)
-        monkeypatch.setattr(
-            "mailroom.local_cache.shutil.which", lambda _: "/usr/bin/mu"
-        )
+        monkeypatch.setattr("courier.local_cache.shutil.which", lambda _: "/usr/bin/mu")
 
         result = backend.is_eligible(_make_block())
 
@@ -77,9 +75,7 @@ class TestMuBackendIsEligible:
         os.utime(xapian, (old_ts, old_ts))
         cfg = LocalCacheConfig(mu_index=muhome, max_staleness_seconds=3600)
         backend = MuBackend(cfg)
-        monkeypatch.setattr(
-            "mailroom.local_cache.shutil.which", lambda _: "/usr/bin/mu"
-        )
+        monkeypatch.setattr("courier.local_cache.shutil.which", lambda _: "/usr/bin/mu")
 
         result = backend.is_eligible(_make_block())
 
@@ -91,9 +87,7 @@ class TestMuBackendIsEligible:
         muhome = _make_xapian_dir(tmp_path)
         cfg = LocalCacheConfig(mu_index=muhome, max_staleness_seconds=86400)
         backend = MuBackend(cfg)
-        monkeypatch.setattr(
-            "mailroom.local_cache.shutil.which", lambda _: "/usr/bin/mu"
-        )
+        monkeypatch.setattr("courier.local_cache.shutil.which", lambda _: "/usr/bin/mu")
 
         result = backend.is_eligible(_make_block())
 
@@ -107,9 +101,7 @@ class TestMuBackendIsEligible:
         muhome = _make_xapian_dir(tmp_path)
         cfg = LocalCacheConfig(mu_index=muhome, max_staleness_seconds=86400)
         backend = MuBackend(cfg)
-        monkeypatch.setattr(
-            "mailroom.local_cache.shutil.which", lambda _: "/usr/bin/mu"
-        )
+        monkeypatch.setattr("courier.local_cache.shutil.which", lambda _: "/usr/bin/mu")
         block = ImapBlock(
             host="imap.example.com",
             port=993,
@@ -149,7 +141,7 @@ class TestMuBackendSearch:
                 args=argv, returncode=0, stdout="[]", stderr=""
             )
 
-        with patch("mailroom.local_cache.subprocess.run", side_effect=fake_run):
+        with patch("courier.local_cache.subprocess.run", side_effect=fake_run):
             backend.search(account_cfg, "from:alice", limit=10)
 
         argv = captured["argv"]
@@ -168,7 +160,7 @@ class TestMuBackendSearch:
         assert argv[-1] == "(from:alice) AND maildir:/work/"
 
     def test_parses_mu_json_output(self, tmp_path):
-        """A single mu json record round-trips into the mailroom result shape."""
+        """A single mu json record round-trips into the courier result shape."""
         backend = self._backend(tmp_path)
         account_cfg = _make_block("/var/local/mail/work")
         sample = [
@@ -186,7 +178,7 @@ class TestMuBackendSearch:
         ]
 
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[],
                 returncode=0,
@@ -220,7 +212,7 @@ class TestMuBackendSearch:
         account_cfg = _make_block()
 
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=2, stdout="", stderr="no matches\n"
             ),
@@ -237,7 +229,7 @@ class TestMuBackendSearch:
         def boom(argv, **kwargs):
             raise subprocess.TimeoutExpired(cmd=argv, timeout=30)
 
-        with patch("mailroom.local_cache.subprocess.run", side_effect=boom):
+        with patch("courier.local_cache.subprocess.run", side_effect=boom):
             with pytest.raises(MuFailure, match="timed out"):
                 backend.search(account_cfg, "from:alice", limit=10)
 
@@ -247,7 +239,7 @@ class TestMuBackendSearch:
         account_cfg = _make_block()
 
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=1, stdout="", stderr="permission denied"
             ),
@@ -261,7 +253,7 @@ class TestMuBackendSearch:
         account_cfg = _make_block()
 
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=0, stdout="not json", stderr=""
             ),
@@ -276,7 +268,7 @@ class TestMuBackendSearch:
         account_cfg = _make_block()
 
         # subprocess.run should never be called for an untranslatable query.
-        with patch("mailroom.local_cache.subprocess.run") as mock_run:
+        with patch("courier.local_cache.subprocess.run") as mock_run:
             with pytest.raises(UntranslatableQuery):
                 backend.search(account_cfg, "imap:UNSEEN", limit=10)
             mock_run.assert_not_called()
@@ -318,7 +310,7 @@ class TestMuBackendSearch:
             }
         ]
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=0, stdout=json.dumps(sample), stderr=""
             ),
@@ -347,7 +339,7 @@ class TestMuBackendSearch:
             }
         ]
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=0, stdout=json.dumps(sample), stderr=""
             ),
@@ -379,7 +371,7 @@ class TestMuBackendSearch:
             }
         ]
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=0, stdout=json.dumps(sample), stderr=""
             ),
@@ -430,7 +422,7 @@ class TestMuBackendSearch:
             }
         ]
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=0, stdout=json.dumps(sample), stderr=""
             ),
@@ -482,7 +474,7 @@ class TestMuBackendSearch:
             }
         ]
         with patch(
-            "mailroom.local_cache.subprocess.run",
+            "courier.local_cache.subprocess.run",
             return_value=subprocess.CompletedProcess(
                 args=[], returncode=0, stdout=json.dumps(sample), stderr=""
             ),

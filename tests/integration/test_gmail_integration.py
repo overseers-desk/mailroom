@@ -14,9 +14,9 @@ from typing import Dict, Generator
 import pytest
 from dotenv import load_dotenv
 
-from mailroom.config import ImapBlock, OAuth2Config
-from mailroom.imap_client import ImapClient
-from mailroom.models import Email
+from courier.config import ImapBlock, OAuth2Config
+from courier.imap_client import ImapClient
+from courier.models import Email
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

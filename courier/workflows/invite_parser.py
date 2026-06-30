@@ -9,7 +9,7 @@ import re
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
-from mailroom.models import Email
+from courier.models import Email
 
 logger = logging.getLogger(__name__)
 

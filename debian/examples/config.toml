@@ -1,6 +1,6 @@
-# Mailroom configuration — multi-account example.
+# Courier configuration — multi-account example.
 # Copy to config.toml and edit with your credentials.
-# Use -a to select an account: mailroom -a work search-emails ...
+# Use -a to select an account: courier -a work search-emails ...
 
 default_account = "personal"
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from mailroom.app_password import setup_app_password
+from courier.app_password import setup_app_password
 
 
 class TestSetupAppPassword:

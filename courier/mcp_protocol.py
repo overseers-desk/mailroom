@@ -1,4 +1,4 @@
-"""MCP Protocol Implementation for Mailroom.
+"""MCP Protocol Implementation for Courier.
 
 This module implements the required MCP protocol methods that are not directly
 supported by FastMCP but needed for Claude desktop compatibility.

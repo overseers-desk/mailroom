@@ -1,7 +1,7 @@
 """Slash-command source for Claude Code, plus its calibration record.
 
 This module carries the body of the file emitted by
-``mailroom install-claude-command`` into the user's Claude Code commands
+``courier install-claude-command`` into the user's Claude Code commands
 directory, alongside the failure-modes registry the slash-command source
 is calibrated against. The two sit together so that any editor of the
 slash-command body has the calibration record in line of sight.
@@ -33,27 +33,27 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 ### A1. Singular-verb bias
 
-**Failure case.** In a case where the user asked "find emails from Alice about hotel booking and from Bob about the contract", the AI failed to use the chain shape because it ran the two questions as separate `mailroom` invocations, paying two IMAP logins per IMAP block (Gmail caps simultaneous IMAP connections per account). The same fan-out pattern surfaces with `read`, `attachments`, and serial `search`+`read`.
+**Failure case.** In a case where the user asked "find emails from Alice about hotel booking and from Bob about the contract", the AI failed to use the chain shape because it ran the two questions as separate `courier` invocations, paying two IMAP logins per IMAP block (Gmail caps simultaneous IMAP connections per account). The same fan-out pattern surfaces with `read`, `attachments`, and serial `search`+`read`.
 
 **Solution.** Every code example in the source chains at least two verbs. Section titles are plural ("Searches", "Reads") so the operation reads as naturally plural. The plural shape is the only one the reader encounters; the AI absorbs the chained form from the only pattern present.
 
 ### A2. Fan-out across processes for N items
 
-**Failure case.** In a case where the user asked the AI to read three messages from the same folder, the AI failed to share one IMAP login because it ran `mailroom read -u 1`, `mailroom read -u 2`, `mailroom read -u 3` as three separate processes (or a bash loop), each paying its own login. On Gmail this trips the per-account simultaneous-connection cap.
+**Failure case.** In a case where the user asked the AI to read three messages from the same folder, the AI failed to share one IMAP login because it ran `courier read -u 1`, `courier read -u 2`, `courier read -u 3` as three separate processes (or a bash loop), each paying its own login. On Gmail this trips the per-account simultaneous-connection cap.
 
 **Solution.** The `read` example chains the three UIDs inside one invocation: `read -u 100 read -u 200 read -u 300 -f INBOX`. The prose states "Login dominates the per-fetch cost; Gmail caps simultaneous IMAP connections per account, so N parallel `read` processes hit that cap" as a fact, not as an instruction. The reader infers the chain shape from the cost statement plus the example.
 
 ### A3. Expecting dynamic UID substitution within a chain
 
-**Failure case.** In a case where the AI had absorbed the chain shape, it tried `mailroom search "from:alice" read -u $UID -f INBOX` expecting the search to feed UIDs into `read`. The chain ran both verbs but the UID in `read` was static; no substitution happened.
+**Failure case.** In a case where the AI had absorbed the chain shape, it tried `courier search "from:alice" read -u $UID -f INBOX` expecting the search to feed UIDs into `read`. The chain ran both verbs but the UID in `read` was static; no substitution happened.
 
 **Solution.** The `read` example uses literal UIDs (`-u 100 -u 200 -u 300`). The prose says "UIDs from a prior search go into one chain." The "from a prior search" phrasing implies the AI ran search, looked at the JSON, then pasted UIDs into the second invocation. Examples in the source stay clear of any shape that suggests dynamic substitution.
 
 ### A4. Preflight probing
 
-**Failure case.** In a case where the user asked "what's in my inbox?", the AI failed to answer directly because it first ran `mailroom list` and `mailroom config-check` to "see what's configured" before getting to the actual question, doubling the latency.
+**Failure case.** In a case where the user asked "what's in my inbox?", the AI failed to answer directly because it first ran `courier list` and `courier config-check` to "see what's configured" before getting to the actual question, doubling the latency.
 
-**Solution.** Examples open directly on the user's question. Configuration discovery appears exactly once, scoped to the case where it is genuinely needed (`mailroom list returns the configured identity names under its identity key`). The shape of every example does the work; the source leaves probing to the AI's judgement.
+**Solution.** Examples open directly on the user's question. Configuration discovery appears exactly once, scoped to the case where it is genuinely needed (`courier list returns the configured identity names under its identity key`). The shape of every example does the work; the source leaves probing to the AI's judgement.
 
 ---
 
@@ -107,7 +107,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 ### C1. Mixing stderr into stdout when piping to jq
 
-**Failure case.** In a case where the AI wrote `mailroom search "..." --format json 2>&1 | jq '.'`, the JSON parse broke because stderr nudges (e.g. "mailroom command installed at version X, current is Y") concatenated into stdout, and `jq` choked on the trailing text. The AI saw the parse error and sometimes retried with the same `2>&1`, looping.
+**Failure case.** In a case where the AI wrote `courier search "..." --format json 2>&1 | jq '.'`, the JSON parse broke because stderr nudges (e.g. "courier command installed at version X, current is Y") concatenated into stdout, and `jq` choked on the trailing text. The AI saw the parse error and sometimes retried with the same `2>&1`, looping.
 
 **Solution.** Examples redirect stdout to a tempfile (`> "$RESULTS"`) and read it with `jq` separately, leaving stderr to fall on the user's terminal where nudges are addressed to a human reader. The example shape is what the AI copies; the stream-merging anti-pattern is absent from every model in the source.
 
@@ -131,7 +131,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 **Failure case.** In a case where the user asked the AI to send a routine reply from their main identity, the AI failed to act quickly because the doc carried both Mode A (`--identity NAME`) and Mode B (`--smtp NAME --from EMAIL`) up front; the AI read both, weighed which applied, and produced a slower response. Mode B serves a small minority of installations.
 
-**Solution.** The source covers only `-i NAME` (= `--identity NAME`). Relay-style and other less-common send paths route to `mailroom <verb> --help`. The pointer to `--help` is what the doc does instead of enumerating modes.
+**Solution.** The source covers only `-i NAME` (= `--identity NAME`). Relay-style and other less-common send paths route to `courier <verb> --help`. The pointer to `--help` is what the doc does instead of enumerating modes.
 
 ### D2. Pre-explained niche behaviours
 
@@ -165,7 +165,7 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 **Failure case.** In a case where the doc opened with "An invocation is a chain of verbs. One question maps to one invocation..." before showing what a search actually looked like, the reading AI skimmed the abstraction (which means nothing until they have run one search) and reached the first example without internalising the principle.
 
-**Solution.** The source opens with one short framing sentence, then immediately shows a chained `mailroom search` example. The chain principle is implicit in the example shape and named in passing afterward.
+**Solution.** The source opens with one short framing sentence, then immediately shows a chained `courier search` example. The chain principle is implicit in the example shape and named in passing afterward.
 
 ### E3. Repeating the same rule in multiple places
 
@@ -215,15 +215,15 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 ### F1. Reproducing the operators list
 
-**Failure case.** In a case where the doc enumerated `from:`, `to:`, `subject:`, `after:`, `before:`, `is:unread`, `is:read`, the AI memorised the partial list, missed an operator that exists but wasn't in the doc (e.g. `larger:`, `has:attachment`), and either invented one or ran a second search without it. `mailroom search --help` and the Gmail-syntax docs already enumerate these accurately.
+**Failure case.** In a case where the doc enumerated `from:`, `to:`, `subject:`, `after:`, `before:`, `is:unread`, `is:read`, the AI memorised the partial list, missed an operator that exists but wasn't in the doc (e.g. `larger:`, `has:attachment`), and either invented one or ran a second search without it. `courier search --help` and the Gmail-syntax docs already enumerate these accurately.
 
 **Solution.** Operator inventory lives in `--help`; the example queries in the source demonstrate the syntax shape only.
 
 ### F2. Reproducing send-flag inventory
 
-**Failure case.** In a case where the doc listed `--bcc`, `--cc`, `--attach`, `--body-html`, `--no-thread`, `--allow-no-copy`, `--keep-draft`, `--dry-run`, `--fcc IMAP:FOLDER` in the Sending section, the AI for a routine reply scanned the list and guessed a wrong flag combination instead of consulting `mailroom reply --help` for the specific case.
+**Failure case.** In a case where the doc listed `--bcc`, `--cc`, `--attach`, `--body-html`, `--no-thread`, `--allow-no-copy`, `--keep-draft`, `--dry-run`, `--fcc IMAP:FOLDER` in the Sending section, the AI for a routine reply scanned the list and guessed a wrong flag combination instead of consulting `courier reply --help` for the specific case.
 
-**Solution.** The Sending section names only the verbs (`compose`, `reply`, `send-draft`) and the load-bearing flag (`-i NAME`). Other flags live in `mailroom <verb> --help`.
+**Solution.** The Sending section names only the verbs (`compose`, `reply`, `send-draft`) and the load-bearing flag (`-i NAME`). Other flags live in `courier <verb> --help`.
 
 ### F3. Reproducing exotic-backend dispatch internals
 
@@ -234,42 +234,42 @@ When a solution genuinely requires a rule (e.g. "avoid `2>&1` in examples"), the
 
 
 SLASH_COMMAND = r"""---
-name: mailroom
+name: courier
 description: Find, read, or recall anything in the user's email: search emails, check replies, look up a contact's address, pull attachments, show which sender email addresses the user has, or send mail as one of them.
 ---
 
-# mailroom
+# courier
 
-mailroom searches, reads, and pulls attachments from the user's mailboxes via the mailroom CLI, and sends mail when asked, although most of the time it is not for sending. Each request is one invocation; chained verbs share one connection per IMAP block.
+courier searches, reads, and pulls attachments from the user's mailboxes via the courier CLI, and sends mail when asked, although most of the time it is not for sending. Each request is one invocation; chained verbs share one connection per IMAP block.
 
 ## Searches
 
 ```bash
-RESULTS=$(mktemp /tmp/mailroom.XXXXXXXX)
-mailroom -A --format json \
+RESULTS=$(mktemp /tmp/courier.XXXXXXXX)
+courier -A --format json \
   search "from:alice hotel booking" \
   search "from:bob contract" \
   > "$RESULTS"
 jq 'map_values(map_values(.results |= .[0:10]))' "$RESULTS"
 ```
 
-Pack questions into one invocation: each `search` becomes one outer key in the result, sharing one connection per IMAP block. `search` accepts Gmail-style queries; tokens combine with implicit AND, `OR` clusters alternatives. Results sort newest-first; trailing `-n` peels off as a chain default (default 50) and applies to every `search` that doesn't set its own. The `jq` step trims each block's `results` to 10 in place, keeping the `{op_key: {imap_name: ...}}` shape; the underlying tempfile holds all 50. To see more, widen the slice (e.g. `.[0:25]` or drop the `|= .[0:10]` step) rather than re-run `mailroom`. Use the words from the user's request (a name they mentioned, a domain, a subject phrase); an AI-constructed address often misses, and a spoken nickname or short form (Tony for Antonio) may not match the form filed in headers. Read a hit to recover the actual surface from `from` or the body, then re-search if needed.
+Pack questions into one invocation: each `search` becomes one outer key in the result, sharing one connection per IMAP block. `search` accepts Gmail-style queries; tokens combine with implicit AND, `OR` clusters alternatives. Results sort newest-first; trailing `-n` peels off as a chain default (default 50) and applies to every `search` that doesn't set its own. The `jq` step trims each block's `results` to 10 in place, keeping the `{op_key: {imap_name: ...}}` shape; the underlying tempfile holds all 50. To see more, widen the slice (e.g. `.[0:25]` or drop the `|= .[0:10]` step) rather than re-run `courier`. Use the words from the user's request (a name they mentioned, a domain, a subject phrase); an AI-constructed address often misses, and a spoken nickname or short form (Tony for Antonio) may not match the form filed in headers. Read a hit to recover the actual surface from `from` or the body, then re-search if needed.
 
 `OR` inside one `search` returns a flat union under that one outer key, so the same entity's different surfaces (name, code, corporate domain, language variants) stay together rather than scatter across separate keys. Surfaces often share no letters; enumerate from what the user knows:
 
 ```bash
-mailroom -A --format json \
+courier -A --format json \
   search "from:@example.com OR 'Example Trading' OR 'Example Inc'" \
   search "subject:invoice after:2026-01-01" \
   > "$RESULTS"
 ```
 
-Output shape: `{op_key: {imap_name: {results: [...], provenance: {...}}}}`. `mailroom -A` queries every IMAP block; `--imap NAME` (repeats across the chain) selects specific blocks. Slice the JSON with `jq` against a tempfile; `head`/`tail` cut mid-structure.
+Output shape: `{op_key: {imap_name: {results: [...], provenance: {...}}}}`. `courier -A` queries every IMAP block; `--imap NAME` (repeats across the chain) selects specific blocks. Slice the JSON with `jq` against a tempfile; `head`/`tail` cut mid-structure.
 
 ## Reads
 
 ```bash
-mailroom --imap <imap> --format json \
+courier --imap <imap> --format json \
   read -u 100 \
   read -u 200 \
   read -u 300 \
@@ -282,9 +282,9 @@ UIDs from a prior search go into one chain over a single IMAP session; trailing 
 ## Attachments
 
 ```bash
-mailroom --imap <imap> attachments -f <folder> -u <uid>
-mailroom --imap <imap> save -f <folder> -u <uid> --attachment <name> -o <path>
-mailroom --imap <imap> export -f <folder> -u <uid> --raw -o /tmp/msg.eml
+courier --imap <imap> attachments -f <folder> -u <uid>
+courier --imap <imap> save -f <folder> -u <uid> --attachment <name> -o <path>
+courier --imap <imap> export -f <folder> -u <uid> --raw -o /tmp/msg.eml
 ```
 
 `--attachment` accepts a filename or the numeric index reported by `attachments`.
@@ -292,14 +292,14 @@ mailroom --imap <imap> export -f <folder> -u <uid> --raw -o /tmp/msg.eml
 ## Sending
 
 ```bash
-mailroom compose --to recipient@example.com --subject "..." --body "..." --send -i NAME
-mailroom --imap <imap> reply -f <folder> -u <uid> --body "..." --send -i NAME
-mailroom --imap <imap> send-draft -f Drafts -u <uid>
+courier compose --to recipient@example.com --subject "..." --body "..." --send -i NAME
+courier --imap <imap> reply -f <folder> -u <uid> --body "..." --send -i NAME
+courier --imap <imap> send-draft -f Drafts -u <uid>
 ```
 
 Subjects and bodies pass through as UTF-8 in whatever script the user writes; their correspondence runs in Spanish and Chinese as well as English.
 
-`-i NAME` (= `--identity NAME`) picks a configured `[identity.NAME]` block; reply inherits the parent's threading headers. Drop `--send` to save as a draft. `mailroom list` returns the configured identity names under its `identity` key; `mailroom <verb> --help` carries flags for relay-style sends and other less-common paths.
+`-i NAME` (= `--identity NAME`) picks a configured `[identity.NAME]` block; reply inherits the parent's threading headers. Drop `--send` to save as a draft. `courier list` returns the configured identity names under its `identity` key; `courier <verb> --help` carries flags for relay-style sends and other less-common paths.
 """
 
 
@@ -307,10 +307,10 @@ def render(version: str) -> str:
     """Return the slash-command body with ``version:`` stamped into the frontmatter.
 
     Args:
-        version: The mailroom version string to record in the installed copy.
+        version: The courier version string to record in the installed copy.
 
     Returns:
-        The text written to ``~/.claude/commands/mailroom.md``. The
+        The text written to ``~/.claude/commands/courier.md``. The
         ``version:`` line is inserted as the first field inside the YAML
         frontmatter block when the body opens with ``---\\n``; otherwise
         the body is returned unchanged.

@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 
 import pytest
 
-from mailroom.models import Email, EmailAddress
+from courier.models import Email, EmailAddress
 from tests.test_utils import (
     assert_email_equals,
     create_mock_folder_list,

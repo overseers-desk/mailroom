@@ -1,9 +1,9 @@
-"""Logging destination setup for the mailroom CLI and MCP server.
+"""Logging destination setup for the courier CLI and MCP server.
 
 Records are routed to the local syslog socket when one is reachable,
 so that intermittent warnings (search-folder timeouts, connection
 verification failures, IMAP logout errors) survive past the terminal
-session and can be queried with e.g. ``journalctl -t mailroom``.  A
+session and can be queried with e.g. ``journalctl -t courier``.  A
 stderr fallback covers hosts that do not have a writable syslog socket
 (Windows, sandboxes, macOS without a running syslog daemon, etc.), so
 existing behaviour is preserved where syslog is absent.
@@ -24,7 +24,7 @@ _DEFAULT_FORMAT = "%(levelname)s %(name)s: %(message)s"
 
 
 def setup_logging(level: int, stderr_format: Optional[str] = None) -> None:
-    """Configure the root logger for mailroom.
+    """Configure the root logger for courier.
 
     Replaces any existing handlers on the root logger with a single
     handler: a ``SysLogHandler`` if a local syslog socket is reachable,
@@ -51,8 +51,8 @@ def setup_logging(level: int, stderr_format: Optional[str] = None) -> None:
 def _make_syslog_handler() -> Optional[logging.Handler]:
     """Return a ``SysLogHandler`` bound to the first reachable socket.
 
-    The ident is set to ``mailroom`` so that systemd-journald records
-    the SYSLOG_IDENTIFIER and ``journalctl -t mailroom`` works as a
+    The ident is set to ``courier`` so that systemd-journald records
+    the SYSLOG_IDENTIFIER and ``journalctl -t courier`` works as a
     query path.
 
     Returns:
@@ -66,7 +66,7 @@ def _make_syslog_handler() -> Optional[logging.Handler]:
             handler = logging.handlers.SysLogHandler(address=address)
         except OSError:
             continue
-        handler.ident = "mailroom: "
+        handler.ident = "courier: "
         handler.setFormatter(logging.Formatter(_DEFAULT_FORMAT))
         return handler
     return None

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from mailroom.models import Email, EmailAddress, EmailContent
-from mailroom.smtp_client import create_mime
+from courier.models import Email, EmailAddress, EmailContent
+from courier.smtp_client import create_mime
 
 
 class TestCreateReplyMime:

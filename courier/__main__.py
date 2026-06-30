@@ -1,6 +1,6 @@
-"""Mailroom — email toolkit for AI assistants and command-line scripting.
+"""Courier — email toolkit for AI assistants and command-line scripting.
 
-All CLI commands are subcommands of `mailroom`. The `mcp` subcommand starts
+All CLI commands are subcommands of `courier`. The `mcp` subcommand starts
 the MCP server; every other subcommand operates directly via IMAP without
 importing the mcp package.
 """
@@ -14,35 +14,35 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import typer
 
-from mailroom import __version__
-from mailroom.config import (
+from courier import __version__
+from courier.config import (
+    CourierConfig,
     ImapBlock,
-    MailroomConfig,
     SmtpConfig,
     load_config,
     load_config_with_warnings,
 )
-from mailroom.imap_client import ImapClient
-from mailroom.logging_setup import setup_logging
-from mailroom.models import extract_links_batch
+from courier.imap_client import ImapClient
+from courier.logging_setup import setup_logging
+from courier.models import extract_links_batch
 
 if TYPE_CHECKING:
-    from mailroom.local_cache import MuBackend
+    from courier.local_cache import MuBackend
 
 
 def _version_callback(value: bool) -> None:
     if value:
-        typer.echo(f"mailroom {__version__}")
+        typer.echo(f"courier {__version__}")
         raise typer.Exit()
 
 
 app = typer.Typer(
-    name="mailroom",
+    name="courier",
     help=(
         "Email toolkit for AI assistants and command-line scripting.\n\n"
         "Examples:\n\n"
-        "  mailroom -A search 'sergio' search 'panedas' read -f INBOX -u 42\n"
-        "  mailroom search 'from:alice@x' || mailroom search 'alice'\n\n"
+        "  courier -A search 'sergio' search 'panedas' read -f INBOX -u 42\n"
+        "  courier search 'from:alice@x' || courier search 'alice'\n\n"
         "Exit codes for data-returning commands (search, attachments, links): "
         "0 on success with results, 1 on success with zero results."
     ),
@@ -62,11 +62,11 @@ _mu_backend_singleton: Optional["MuBackend"] = None
 logger = logging.getLogger(__name__)
 
 
-def _get_mu_backend(cfg: MailroomConfig) -> Optional["MuBackend"]:
+def _get_mu_backend(cfg: CourierConfig) -> Optional["MuBackend"]:
     """Return the shared MuBackend, building it on first use.
 
     Args:
-        cfg: The loaded mailroom configuration.
+        cfg: The loaded courier configuration.
 
     Returns:
         A ``MuBackend`` instance when ``cfg.local_cache`` is present;
@@ -76,7 +76,7 @@ def _get_mu_backend(cfg: MailroomConfig) -> Optional["MuBackend"]:
     if cfg.local_cache is None:
         return None
     if _mu_backend_singleton is None:
-        from mailroom.local_cache import MuBackend
+        from courier.local_cache import MuBackend
 
         _mu_backend_singleton = MuBackend(cfg.local_cache)
     return _mu_backend_singleton
@@ -90,7 +90,7 @@ def _global_options(
         "--config",
         "-c",
         help="Path to TOML configuration file.",
-        envvar="MAILROOM_CONFIG",
+        envvar="COURIER_CONFIG",
     ),
     imap_names: List[str] = typer.Option(
         [],
@@ -702,7 +702,7 @@ def _apply_global_flags(global_argv: List[str]) -> None:
         elif tok in ("-v", "--verbose"):
             verbose = True
         elif tok == "--version":
-            typer.echo(f"mailroom {__version__}")
+            typer.echo(f"courier {__version__}")
             raise SystemExit(0)
         i += 1
     _config_path = cfg_path
@@ -793,7 +793,7 @@ def _email_only(s: str) -> str:
     return s
 
 
-def _load_cfg_or_exit() -> MailroomConfig:
+def _load_cfg_or_exit() -> CourierConfig:
     """Load config or exit 1 with the usual error formatting."""
     try:
         return load_config(_config_path)
@@ -818,7 +818,7 @@ def _resolve_smtp_or_exit(
     """
     if smtp_override is not None:
         return smtp_override
-    from mailroom.identity import SmtpUnresolved, resolve_smtp_for_identity
+    from courier.identity import SmtpUnresolved, resolve_smtp_for_identity
 
     try:
         return resolve_smtp_for_identity(identity, imap_block, imap_name, smtp_blocks)
@@ -879,7 +879,7 @@ def _refuse_if_no_copy(
     if will_fcc or allow_no_copy:
         return
     if bcc:
-        from mailroom.models import EmailAddress
+        from courier.models import EmailAddress
 
         sender_lower = sender_addr.lower()
         for entry in bcc:
@@ -929,8 +929,8 @@ def _perform_send(
         The standard send-result JSON shape (status, identity, message_ids,
         smtp_response, accepted_recipients, fcc_folder, fcc_uid).
     """
-    from mailroom.imap_client import SENT_FOLDER_CANDIDATES
-    from mailroom.smtp_transport import send as smtp_send
+    from courier.imap_client import SENT_FOLDER_CANDIDATES
+    from courier.smtp_transport import send as smtp_send
 
     fcc_target: Optional[str] = None
     if client is not None:
@@ -979,7 +979,7 @@ def _perform_send(
 
 
 def _resolve_send_route(
-    cfg: MailroomConfig,
+    cfg: CourierConfig,
     identity_name: Optional[str],
     smtp_name: Optional[str],
     from_email: Optional[str],
@@ -1008,8 +1008,8 @@ def _resolve_send_route(
     Exits via ``typer.Exit(1)`` on a validation failure with a message
     naming the offending input and how to correct it.
     """
-    from mailroom.config import Identity as _Identity
-    from mailroom.config import smtp_has_own_creds, validate_display_name
+    from courier.config import Identity as _Identity
+    from courier.config import smtp_has_own_creds, validate_display_name
 
     if identity_name and smtp_name:
         typer.echo(
@@ -1121,7 +1121,7 @@ def _resolve_send_route(
     return None
 
 
-def _no_route_error(cfg: MailroomConfig) -> None:
+def _no_route_error(cfg: CourierConfig) -> None:
     """Emit the canonical 'no --identity / --smtp on --send' error and exit.
 
     Centralised so compose, reply, and send-draft show the same wording.
@@ -1137,7 +1137,7 @@ def _no_route_error(cfg: MailroomConfig) -> None:
 
 
 def _print_eager_warnings_if_relevant() -> None:
-    """Print config warnings to stderr when user is 'checking in' on mailroom.
+    """Print config warnings to stderr when user is 'checking in' on courier.
 
     Detects no-args, ``--help``, or ``-h`` in argv (after stripping known
     global options like ``--config``/``--imap``). Surfaces warnings before
@@ -1306,13 +1306,13 @@ def config_check() -> None:
         raise typer.Exit(1)
     for w in warnings:
         print(f"warn: {w}", file=sys.stderr)
-    path = _config_path or "~/.config/mailroom/config.toml"
+    path = _config_path or "~/.config/courier/config.toml"
     print(f"config-check: OK ({path})")
     if warnings:
         print(f"  ({len(warnings)} warning(s) above)")
 
 
-def _build_inventory(cfg: MailroomConfig) -> Dict[str, Any]:
+def _build_inventory(cfg: CourierConfig) -> Dict[str, Any]:
     """Build the unified JSON inventory of [imap.*]/[smtp.*]/[identity.*]."""
     by_imap: Dict[str, List[str]] = {}
     for ident_name, ident in cfg.identities.items():
@@ -1368,13 +1368,13 @@ def list_cmd() -> None:
 
 
 def _installed_command_version() -> Optional[str]:
-    """Return the version stamped in ~/.claude/commands/mailroom.md, or None.
+    """Return the version stamped in ~/.claude/commands/courier.md, or None.
 
     Reads the ``version:`` frontmatter field written by ``install-claude-command``.
     Returns None when the file is absent or carries no version field (pre-versioning
     installs).
     """
-    command_file = Path.home() / ".claude" / "commands" / "mailroom.md"
+    command_file = Path.home() / ".claude" / "commands" / "courier.md"
     if not command_file.exists():
         return None
     for line in command_file.read_text().splitlines():
@@ -1384,31 +1384,31 @@ def _installed_command_version() -> Optional[str]:
 
 
 def _claude_registration_status() -> Optional[str]:
-    """Return a nudge string if ~/.claude exists but mailroom is not registered or is stale.
+    """Return a nudge string if ~/.claude exists but courier is not registered or is stale.
 
     Returns None when ~/.claude is absent (user has no Claude Code install)
-    or when mailroom is already registered at the current version.
+    or when courier is already registered at the current version.
     """
     claude_dir = Path.home() / ".claude"
     if not claude_dir.exists():
         return None
-    command_file = claude_dir / "commands" / "mailroom.md"
-    skill_dir = claude_dir / "skills" / "mailroom"
+    command_file = claude_dir / "commands" / "courier.md"
+    skill_dir = claude_dir / "skills" / "courier"
     if skill_dir.exists():
         return None
     if not command_file.exists():
         return (
-            "mailroom command not installed in Claude Code. "
-            "Run `mailroom install-claude-command` to install it, "
+            "courier command not installed in Claude Code. "
+            "Run `courier install-claude-command` to install it, "
             "then continue with the user's request."
         )
     installed = _installed_command_version()
     if installed != __version__:
         installed_label = installed if installed else "unknown"
         return (
-            f"mailroom command file is at version {installed_label}, "
+            f"courier command file is at version {installed_label}, "
             f"package is {__version__}. "
-            "Run `mailroom install-claude-command --yes` to update it, "
+            "Run `courier install-claude-command --yes` to update it, "
             "then continue with the user's request."
         )
     return None
@@ -1456,17 +1456,17 @@ def install_claude_command(
         "(for non-interactive callers such as Claude Code sessions).",
     ),
 ) -> None:
-    """Copy the Claude Code command file into ~/.claude/commands/mailroom.md.
+    """Copy the Claude Code command file into ~/.claude/commands/courier.md.
 
-    After running this command, Claude Code will recognise the ``mailroom``
-    skill and route email-related requests through the mailroom CLI.
+    After running this command, Claude Code will recognise the ``courier``
+    skill and route email-related requests through the courier CLI.
     If a previous version is already installed, you will be asked to confirm
     before it is replaced, unless ``--yes`` is given.
     """
-    from mailroom._claude_command import render
+    from courier._claude_command import render
 
     dest_dir = Path.home() / ".claude" / "commands"
-    dest = dest_dir / "mailroom.md"
+    dest = dest_dir / "courier.md"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     if dest.exists():
@@ -1477,7 +1477,7 @@ def install_claude_command(
             return
         if not yes:
             confirmed = typer.confirm(
-                f"mailroom command already installed ({installed_label}). "
+                f"courier command already installed ({installed_label}). "
                 f"Replace with {__version__}?"
             )
             if not confirmed:
@@ -1488,7 +1488,7 @@ def install_claude_command(
     print(f"Installed {__version__}: {dest}")
 
 
-def _probe_all(cfg: MailroomConfig) -> List[Tuple[str, str, str, str, str]]:
+def _probe_all(cfg: CourierConfig) -> List[Tuple[str, str, str, str, str]]:
     """Probe every configured IMAP and SMTP block sequentially.
 
     Returns rows as (name, kind, endpoint, status, cache). Order: IMAP
@@ -1565,7 +1565,7 @@ def _probe_smtp(smtp: SmtpConfig) -> str:
             pass
 
 
-def _probe_cache(cfg: MailroomConfig, block: ImapBlock) -> str:
+def _probe_cache(cfg: CourierConfig, block: ImapBlock) -> str:
     """Report local-cache health for one [imap.NAME] block.
 
     Produces the status table's CACHE cell. A block is "opted in" when
@@ -1576,7 +1576,7 @@ def _probe_cache(cfg: MailroomConfig, block: ImapBlock) -> str:
     or ``"mu not found"`` / ``"no index"`` when the backend cannot run.
 
     Args:
-        cfg: The loaded mailroom configuration.
+        cfg: The loaded courier configuration.
         block: The [imap.NAME] block to report on.
 
     Returns:
@@ -1629,7 +1629,7 @@ def _format_age(seconds: float) -> str:
 
 def _print_status_table(rows: List[Tuple[str, str, str, str, str]]) -> None:
     """Print the status rows as an aligned plain-text table to stdout."""
-    print(f"mailroom {__version__}")
+    print(f"courier {__version__}")
     if not rows:
         print("(no [imap.*] or [smtp.*] blocks configured)")
         return
@@ -1695,7 +1695,7 @@ def search(
     """Search for emails.
 
     Repeat the verb to look up several keywords in one invocation:
-    ``mailroom search foo search bar``.
+    ``courier search foo search bar``.
 
     Output is a JSON object keyed first by operation string, then by
     [imap.NAME] block. Each per-block value is ``{"results": [...],
@@ -1709,7 +1709,7 @@ def search(
     from -> to, message_id).
 
     Exit code: 0 on hits, 1 when every block returned zero results, so
-    shell fallback chains work: ``mailroom search 'from:x' || mailroom
+    shell fallback chains work: ``courier search 'from:x' || courier
     search 'x'``.
     """
     effective = query_opt if query_opt is not None else query
@@ -1844,7 +1844,7 @@ def copy_cmd(
     Fetches the raw RFC 822 message from the source and APPENDs it to the
     destination, preserving the message byte-for-byte and its original date.
     """
-    from mailroom.imap_client import copy_email_between_imap_blocks
+    from courier.imap_client import copy_email_between_imap_blocks
 
     source = _make_client(imap_override=from_imap)
     dest = _make_client()
@@ -2035,7 +2035,7 @@ def attachments(
     """List attachments for an email.
 
     Exit code: 0 if at least one attachment is found, 1 if the email has
-    none. Shell idiom: ``mailroom attachments -f INBOX -u 1 || echo none``.
+    none. Shell idiom: ``courier attachments -f INBOX -u 1 || echo none``.
     """
     client = _make_client()
     empty = False
@@ -2327,13 +2327,13 @@ def compose(
     """
     import email.utils
 
-    from mailroom.identity import (
+    from courier.identity import (
         IdentityNotFound,
         SendDisabled,
         resolve_identity_for_send,
     )
-    from mailroom.models import EmailAddress
-    from mailroom.smtp_client import create_mime
+    from courier.models import EmailAddress
+    from courier.smtp_client import create_mime
 
     if not (to or cc or bcc):
         typer.echo(
@@ -2583,15 +2583,15 @@ def reply(
     """
     import email.utils
 
-    from mailroom.identity import (
+    from courier.identity import (
         IdentityNotFound,
         SendDisabled,
         identities_for_imap,
         resolve_identity_for_reply,
         resolve_identity_for_send,
     )
-    from mailroom.models import EmailAddress
-    from mailroom.smtp_client import create_mime
+    from courier.models import EmailAddress
+    from courier.smtp_client import create_mime
 
     if send_flag and output is not None:
         typer.echo("Error: --send and --output are mutually exclusive", err=True)
@@ -2867,12 +2867,12 @@ def send_draft(
     """
     from email.parser import BytesParser
 
-    from mailroom.identity import (
+    from courier.identity import (
         IdentityNotFound,
         SendDisabled,
         resolve_identity_for_send,
     )
-    from mailroom.smtp_transport import _pick_default_transport
+    from courier.smtp_transport import _pick_default_transport
 
     cfg = _load_cfg_or_exit()
     name = _resolve_single_imap_name()
@@ -3033,7 +3033,7 @@ def accept_invite(
     ),
 ) -> None:
     """Process a meeting invite and create a draft reply."""
-    from mailroom.workflows.meeting_reply import process_meeting_invite_workflow
+    from courier.workflows.meeting_reply import process_meeting_invite_workflow
 
     client = _make_client()
     try:
@@ -3055,7 +3055,7 @@ def mcp_serve(
         "--config",
         "-c",
         help="Path to TOML configuration file.",
-        envvar="MAILROOM_CONFIG",
+        envvar="COURIER_CONFIG",
     ),
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging."),
     dev: bool = typer.Option(False, "--dev", help="Enable development mode."),
@@ -3063,9 +3063,9 @@ def mcp_serve(
 ) -> None:
     """Start the MCP server (Model Context Protocol)."""
     if version:
-        print(f"Mailroom MCP server version {__version__}")
+        print(f"Courier MCP server version {__version__}")
         raise typer.Exit()
-    from mailroom.mcp_server import create_server
+    from courier.mcp_server import create_server
 
     server = create_server(config, debug)
     server.run()
@@ -3089,9 +3089,9 @@ def _rewrite_argv(argv: List[str]) -> List[str]:
     2. If ``-i``/``--imap`` appears after the subcommand, hoist it to
        before the subcommand so Typer's global callback sees it.
 
-    Skips when ``_MAILROOM_COMPLETE`` is set so shell-completion is undisturbed.
+    Skips when ``_COURIER_COMPLETE`` is set so shell-completion is undisturbed.
     """
-    if os.environ.get("_MAILROOM_COMPLETE"):
+    if os.environ.get("_COURIER_COMPLETE"):
         return argv
     out = list(argv)
     globals_with_value = {"--config", "-c", "--imap"}

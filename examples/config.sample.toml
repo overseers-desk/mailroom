@@ -1,7 +1,7 @@
-# Mailroom configuration example.
+# Courier configuration example.
 #
-# Lives at ~/.config/mailroom/config.toml. Use -i NAME to select an [imap.NAME]:
-#   mailroom -i work search 'from:alice'
+# Lives at ~/.config/courier/config.toml. Use -i NAME to select an [imap.NAME]:
+#   courier -i work search 'from:alice'
 #
 # Three layers, each a top-level named-entity table:
 #   [imap.NAME]       one IMAP mailbox plus per-block options
@@ -39,7 +39,7 @@ host = "email-smtp.ap-southeast-2.amazonaws.com"
 port = 587
 username = "AKIAEXAMPLEEXAMPLE"
 password = "BPa+EXAMPLE/EXAMPLE"
-save_sent = true                       # SES does not auto-file; mailroom FCCs.
+save_sent = true                       # SES does not auto-file; courier FCCs.
 rewrite_msgid_from_response = true     # SES rewrites Message-ID; capture from "250 Ok <token>".
 
 # save_sent values: "auto" | true | false

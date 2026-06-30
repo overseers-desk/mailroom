@@ -1,4 +1,4 @@
-# Mailroom Installation Guide
+# Courier Installation Guide
 
 ## Prerequisites
 
@@ -10,46 +10,46 @@
 ### uv (any platform, no install step)
 
 ```bash
-uvx mailroom search "subject:invoice"
+uvx courier search "subject:invoice"
 ```
 
-To install permanently: `uv tool install mailroom`
+To install permanently: `uv tool install courier`
 
 ### pipx from GitHub (all features, all platforms)
 
 ```bash
-pipx install "mailroom[mcp] @ git+https://github.com/overseers-desk/mailroom"
+pipx install "courier[mcp] @ git+https://github.com/overseers-desk/courier"
 ```
 
 This installs everything including MCP server mode. For CLI-only (no MCP):
 
 ```bash
-pipx install "git+https://github.com/overseers-desk/mailroom"
+pipx install "git+https://github.com/overseers-desk/courier"
 ```
 
 ### Homebrew (all features, macOS and Linux)
 
 ```bash
 brew tap overseers-desk/ot
-brew install mailroom
+brew install courier
 ```
 
 ### Debian / Ubuntu (CLI-only)
 
-Download the latest `.deb` from the [Releases](https://github.com/overseers-desk/mailroom/releases) page and install:
+Download the latest `.deb` from the [Releases](https://github.com/overseers-desk/courier/releases) page and install:
 
 ```bash
-sudo apt install ./mailroom_*_all.deb
+sudo apt install ./courier_*_all.deb
 ```
 
-The .deb provides all CLI commands. The MCP server subcommand (`mailroom mcp`) is not supported in the .deb — it requires the `mcp` Python package which is not yet available as a Debian package. Users who need MCP mode should install via pipx or Homebrew.
+The .deb provides all CLI commands. The MCP server subcommand (`courier mcp`) is not supported in the .deb — it requires the `mcp` Python package which is not yet available as a Debian package. Users who need MCP mode should install via pipx or Homebrew.
 
 To build the .deb from source:
 
 ```bash
 sudo apt install debhelper dh-python pybuild-plugin-pyproject
 dpkg-buildpackage -us -uc -b
-# produces ../mailroom_<version>_all.deb
+# produces ../courier_<version>_all.deb
 ```
 
 ### RPM / Fedora (CLI-only)
@@ -57,7 +57,7 @@ dpkg-buildpackage -us -uc -b
 Build from the included spec file:
 
 ```bash
-rpmbuild -ba mailroom.spec
+rpmbuild -ba courier.spec
 ```
 
 Or use `fpm` for a quick build:
@@ -75,17 +75,17 @@ fpm -s python -t rpm --python-bin python3 --python-pip pip3 \
 
 ```bash
 brew update
-brew upgrade mailroom
+brew upgrade courier
 ```
 
-`brew upgrade mailroom` alone reports "already installed and up-to-date" because Homebrew's auto-update does not pull third-party taps. Run `brew update` first so the `overseers-desk/ot` tap fetches the new formula.
+`brew upgrade courier` alone reports "already installed and up-to-date" because Homebrew's auto-update does not pull third-party taps. Run `brew update` first so the `overseers-desk/ot` tap fetches the new formula.
 
 ### Debian / Ubuntu
 
-Download the new `.deb` from the [Releases](https://github.com/overseers-desk/mailroom/releases) page and re-run the install command. apt handles the upgrade transparently when the version is higher:
+Download the new `.deb` from the [Releases](https://github.com/overseers-desk/courier/releases) page and re-run the install command. apt handles the upgrade transparently when the version is higher:
 
 ```bash
-sudo apt install ./mailroom_<version>_all.deb
+sudo apt install ./courier_<version>_all.deb
 ```
 
 ### RPM / Fedora
@@ -93,14 +93,14 @@ sudo apt install ./mailroom_<version>_all.deb
 Same shape as install: dnf upgrades when the file's version is higher than the installed one:
 
 ```bash
-sudo dnf install ./mailroom-<version>-1.noarch.rpm
+sudo dnf install ./courier-<version>-1.noarch.rpm
 ```
 
 ### pipx / uv
 
 ```bash
-pipx upgrade mailroom        # if installed via pipx
-uv tool upgrade mailroom     # if installed via uv tool install
+pipx upgrade courier        # if installed via pipx
+uv tool upgrade courier     # if installed via uv tool install
 ```
 
 ## Configuration
@@ -108,8 +108,8 @@ uv tool upgrade mailroom     # if installed via uv tool install
 Copy the sample configuration and edit with your credentials:
 
 ```bash
-mkdir -p ~/.config/mailroom
-cp examples/config.sample.toml ~/.config/mailroom/config.toml
+mkdir -p ~/.config/courier
+cp examples/config.sample.toml ~/.config/courier/config.toml
 ```
 
 Example configuration:
@@ -140,19 +140,19 @@ export IMAP_PASSWORD="your_secure_password"
 ### CLI commands
 
 ```bash
-mailroom search "from:alice" search 'subject:"hotel booking"' search "is:unread"
-mailroom search "from:alice subject:invoice"
-mailroom list
-mailroom move -f INBOX -u 123 -t Archive
-mailroom reply -f INBOX -u 123 -b "Thanks for the update."
+courier search "from:alice" search 'subject:"hotel booking"' search "is:unread"
+courier search "from:alice subject:invoice"
+courier list
+courier move -f INBOX -u 123 -t Archive
+courier reply -f INBOX -u 123 -b "Thanks for the update."
 ```
 
-Run `mailroom --help` for the full list of commands, or `man mailroom` on systems installed via .deb.
+Run `courier --help` for the full list of commands, or `man courier` on systems installed via .deb.
 
 ### MCP server (pipx / Homebrew installs only)
 
 ```bash
-mailroom mcp --config /path/to/config.toml
+courier mcp --config /path/to/config.toml
 ```
 
 ### Integrating with Claude Desktop
@@ -162,8 +162,8 @@ Add to your Claude Desktop MCP configuration:
 ```json
 {
   "mcpServers": {
-    "mailroom": {
-      "command": "mailroom",
+    "courier": {
+      "command": "courier",
       "args": ["mcp", "--config", "/path/to/config.toml"],
       "env": {
         "IMAP_PASSWORD": "your_secure_password"
@@ -179,4 +179,4 @@ Add to your Claude Desktop MCP configuration:
 2. Check that your email provider allows IMAP access
 3. For Gmail, use OAuth2 credentials (app passwords work but are less reliable)
 4. Enable debug mode (`--verbose`) for detailed logs
-5. For authentication errors with OAuth2, refresh your token: `mailroom auth refresh-token --config config.toml`
+5. For authentication errors with OAuth2, refresh your token: `courier auth refresh-token --config config.toml`

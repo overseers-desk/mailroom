@@ -1,4 +1,4 @@
-"""Testing utilities for Mailroom."""
+"""Testing utilities for Courier."""
 
 import random
 import string
@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from email.message import Message
 from typing import Dict, List, Optional, Tuple
 
-from mailroom.models import Email, EmailAddress, EmailAttachment, EmailContent
+from courier.models import Email, EmailAddress, EmailAttachment, EmailContent
 
 
 def random_string(length: int = 10) -> str:

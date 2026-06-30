@@ -10,10 +10,10 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from mailroom.models import EmailAddress
-from mailroom.smtp_client import create_mime
-from mailroom.workflows.calendar_mock import check_mock_availability
-from mailroom.workflows.invite_parser import identify_meeting_invite_details
+from courier.models import EmailAddress
+from courier.smtp_client import create_mime
+from courier.workflows.calendar_mock import check_mock_availability
+from courier.workflows.invite_parser import identify_meeting_invite_details
 
 logger = logging.getLogger(__name__)
 

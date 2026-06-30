@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mailroom.config import ImapBlock
-from mailroom.imap_client import ImapClient
-from mailroom.local_cache import EligibilityResult, MuFailure
-from mailroom.models import Email
-from mailroom.query_parser import UntranslatableQuery
+from courier.config import ImapBlock
+from courier.imap_client import ImapClient
+from courier.local_cache import EligibilityResult, MuFailure
+from courier.models import Email
+from courier.query_parser import UntranslatableQuery
 
 
 def _make_maildir_root(tmp_path, folder: str = "INBOX") -> str:
@@ -1641,7 +1641,7 @@ class TestSearchEmailsImapResultShape:
     def _make_email(self, message_id: str = "<m1@example.com>") -> Email:
         from datetime import datetime
 
-        from mailroom.models import EmailAddress, EmailContent
+        from courier.models import EmailAddress, EmailContent
 
         return Email(
             message_id=message_id,

@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from mailroom.gmail_auth import main
+from courier.gmail_auth import main
 
 
 def test_parse_arguments():
@@ -20,7 +20,7 @@ def test_parse_arguments():
 
     with (
         patch("sys.argv", ["gmail_auth.py"] + test_args),
-        patch("mailroom.gmail_auth.perform_oauth_flow") as mock_oauth_flow,
+        patch("courier.gmail_auth.perform_oauth_flow") as mock_oauth_flow,
     ):
 
         mock_oauth_flow.return_value = {"refresh_token": "test_token"}

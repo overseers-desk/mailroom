@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mailroom.models import Email, EmailAddress, EmailAttachment, EmailContent
-from mailroom.tools import register_tools
+from courier.models import Email, EmailAddress, EmailAttachment, EmailContent
+from courier.tools import register_tools
 
 
 @pytest.fixture

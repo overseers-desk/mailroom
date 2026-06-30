@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mailroom.workflows.calendar_mock import (
+from courier.workflows.calendar_mock import (
     _check_availability_by_mode,
     _generate_alternative_times,
     _parse_datetime,

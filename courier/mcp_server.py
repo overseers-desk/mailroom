@@ -1,4 +1,4 @@
-"""Mailroom MCP server — exposes email operations as MCP tools."""
+"""Courier MCP server — exposes email operations as MCP tools."""
 
 import argparse
 import logging
@@ -8,14 +8,14 @@ from typing import AsyncIterator, Dict, Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from mailroom import __version__
-from mailroom.config import MailroomConfig, load_config
-from mailroom.imap_client import ImapClient
-from mailroom.local_cache import MuBackend
-from mailroom.logging_setup import setup_logging
-from mailroom.mcp_protocol import extend_server
-from mailroom.resources import register_resources
-from mailroom.tools import register_tools
+from courier import __version__
+from courier.config import CourierConfig, load_config
+from courier.imap_client import ImapClient
+from courier.local_cache import MuBackend
+from courier.logging_setup import setup_logging
+from courier.mcp_protocol import extend_server
+from courier.resources import register_resources
+from courier.tools import register_tools
 
 # Set up logging: prefer the local syslog socket so MCP-server warnings
 # survive process restarts, with a timestamped stderr fallback when no
@@ -24,7 +24,7 @@ setup_logging(
     logging.INFO,
     stderr_format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger("mailroom")
+logger = logging.getLogger("courier")
 
 
 @asynccontextmanager
@@ -41,10 +41,10 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict]:
         Context dictionary with ``imap_clients`` dict and ``default_imap``
     """
     config_attr = getattr(server, "_config", None)
-    config: MailroomConfig
+    config: CourierConfig
     if config_attr is None:
         config = load_config()
-    elif isinstance(config_attr, MailroomConfig):
+    elif isinstance(config_attr, CourierConfig):
         config = config_attr
     else:
         raise TypeError("Invalid server configuration")
@@ -85,7 +85,7 @@ def create_server(config_path: Optional[str] = None, debug: bool = False) -> Fas
     config = load_config(config_path)
 
     server = FastMCP(
-        "Mailroom",
+        "Courier",
         instructions="Email toolkit for AI assistants",
         lifespan=server_lifespan,
     )
@@ -105,7 +105,7 @@ def create_server(config_path: Optional[str] = None, debug: bool = False) -> Fas
     def status() -> str:
         """Get server status and configuration info."""
         lines = [
-            "server: Mailroom",
+            "server: Courier",
             f"version: {__version__}",
             f"default_imap: {config.default_imap}",
             f"imap blocks: {', '.join(config.imap_blocks.keys())}",
@@ -122,12 +122,12 @@ def create_server(config_path: Optional[str] = None, debug: bool = False) -> Fas
 
 
 def main() -> None:
-    """Run the Mailroom MCP server."""
-    parser = argparse.ArgumentParser(description="Mailroom MCP Server")
+    """Run the Courier MCP server."""
+    parser = argparse.ArgumentParser(description="Courier MCP Server")
     parser.add_argument(
         "--config",
         help="Path to configuration file",
-        default=os.environ.get("MAILROOM_CONFIG"),
+        default=os.environ.get("COURIER_CONFIG"),
     )
     parser.add_argument(
         "--dev",
@@ -147,7 +147,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.version:
-        print(f"Mailroom MCP server version {__version__}")
+        print(f"Courier MCP server version {__version__}")
         return
 
     if args.debug:

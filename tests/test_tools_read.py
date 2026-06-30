@@ -12,9 +12,9 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from mailroom.__main__ import app
-from mailroom.config import ImapBlock, MailroomConfig
-from mailroom.models import Email, EmailAddress, EmailContent
+from courier.__main__ import app
+from courier.config import CourierConfig, ImapBlock
+from courier.models import Email, EmailAddress, EmailContent
 
 
 def _patch_config(imap_name: str = "default"):
@@ -25,8 +25,8 @@ def _patch_config(imap_name: str = "default"):
         password="secret",
         use_ssl=True,
     )
-    cfg = MailroomConfig(imap_blocks={imap_name: block}, _default_imap=imap_name)
-    return patch("mailroom.__main__.load_config", return_value=cfg)
+    cfg = CourierConfig(imap_blocks={imap_name: block}, _default_imap=imap_name)
+    return patch("courier.__main__.load_config", return_value=cfg)
 
 
 def _make_email(
@@ -69,7 +69,7 @@ class TestReadCLIThreadingHeaders:
 
         runner = CliRunner()
         with (
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__._make_client", return_value=client),
             _patch_config(),
         ):
             result = runner.invoke(
@@ -94,7 +94,7 @@ class TestReadCLIThreadingHeaders:
 
         runner = CliRunner()
         with (
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__._make_client", return_value=client),
             _patch_config(),
         ):
             result = runner.invoke(
@@ -118,7 +118,7 @@ class TestReadCLIThreadingHeaders:
 
         runner = CliRunner()
         with (
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__._make_client", return_value=client),
             _patch_config(),
         ):
             result = runner.invoke(
@@ -137,7 +137,7 @@ class TestReadCLIThreadingHeaders:
 
         runner = CliRunner()
         with (
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__._make_client", return_value=client),
             _patch_config(),
         ):
             result = runner.invoke(

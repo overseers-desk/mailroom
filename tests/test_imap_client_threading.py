@@ -13,8 +13,8 @@ from unittest.mock import MagicMock, patch
 
 from imapclient.response_types import SearchIds
 
-from mailroom.config import ImapBlock
-from mailroom.imap_client import ImapClient
+from courier.config import ImapBlock
+from courier.imap_client import ImapClient
 
 
 class TestImapClientThreading(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestImapClientThreading(unittest.TestCase):
         self.mock_client = MagicMock()
 
         # Create patcher for IMAPClient
-        self.imapclient_patcher = patch("mailroom.imap_client.imapclient.IMAPClient")
+        self.imapclient_patcher = patch("courier.imap_client.imapclient.IMAPClient")
         self.mock_imapclient = self.imapclient_patcher.start()
         self.mock_imapclient.return_value = self.mock_client
 

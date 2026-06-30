@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.models import Email, EmailAddress, EmailContent
-from mailroom.tools import register_tools
+from courier.models import Email, EmailAddress, EmailContent
+from courier.tools import register_tools
 from tests.conftest import patch_default_cli_config
 
 # ---------------------------------------------------------------------------
@@ -75,13 +75,13 @@ class TestDraftReplyTool:
         stored, imap_client = tools
         draft_reply = stored["reply"]
 
-        with patch("mailroom.tools.get_client_from_context") as gc:
+        with patch("courier.tools.get_client_from_context") as gc:
             gc.return_value = imap_client
             imap_client.fetch_email.return_value = mock_email
             imap_client.save_draft_mime.return_value = 100
             imap_client._get_drafts_folder.return_value = "Drafts"
 
-            with patch("mailroom.smtp_client.create_mime") as mock_create:
+            with patch("courier.smtp_client.create_mime") as mock_create:
                 mime_msg = MagicMock()
                 mock_create.return_value = mime_msg
 
@@ -104,13 +104,13 @@ class TestDraftReplyTool:
         stored, imap_client = tools
         draft_reply = stored["reply"]
 
-        with patch("mailroom.tools.get_client_from_context") as gc:
+        with patch("courier.tools.get_client_from_context") as gc:
             gc.return_value = imap_client
             imap_client.fetch_email.return_value = mock_email
             imap_client.save_draft_mime.return_value = 101
             imap_client._get_drafts_folder.return_value = "Drafts"
 
-            with patch("mailroom.smtp_client.create_mime") as mock_create:
+            with patch("courier.smtp_client.create_mime") as mock_create:
                 mock_create.return_value = MagicMock()
 
                 result = await draft_reply(
@@ -134,13 +134,13 @@ class TestDraftReplyTool:
         stored, imap_client = tools
         draft_reply = stored["reply"]
 
-        with patch("mailroom.tools.get_client_from_context") as gc:
+        with patch("courier.tools.get_client_from_context") as gc:
             gc.return_value = imap_client
             imap_client.fetch_email.return_value = mock_email
             imap_client.save_draft_mime.return_value = 102
             imap_client._get_drafts_folder.return_value = "Drafts"
 
-            with patch("mailroom.smtp_client.create_mime") as mock_create:
+            with patch("courier.smtp_client.create_mime") as mock_create:
                 mock_create.return_value = MagicMock()
 
                 result = await draft_reply(
@@ -160,7 +160,7 @@ class TestDraftReplyTool:
         draft_reply = stored["reply"]
         imap_client.block.username = "recipient@example.com"
 
-        with patch("mailroom.tools.get_client_from_context") as gc:
+        with patch("courier.tools.get_client_from_context") as gc:
             gc.return_value = imap_client
             imap_client.fetch_email.return_value = mock_email
             imap_client.save_draft_mime.return_value = 103
@@ -183,7 +183,7 @@ class TestDraftReplyTool:
         stored, imap_client = tools
         draft_reply = stored["reply"]
 
-        with patch("mailroom.tools.get_client_from_context") as gc:
+        with patch("courier.tools.get_client_from_context") as gc:
             gc.return_value = imap_client
             imap_client.fetch_email.return_value = None
 
@@ -202,12 +202,12 @@ class TestDraftReplyTool:
         stored, imap_client = tools
         draft_reply = stored["reply"]
 
-        with patch("mailroom.tools.get_client_from_context") as gc:
+        with patch("courier.tools.get_client_from_context") as gc:
             gc.return_value = imap_client
             imap_client.fetch_email.return_value = mock_email
             imap_client.save_draft_mime.return_value = None
 
-            with patch("mailroom.smtp_client.create_mime") as mock_create:
+            with patch("courier.smtp_client.create_mime") as mock_create:
                 mock_create.return_value = MagicMock()
 
                 result = await draft_reply(
@@ -240,15 +240,15 @@ class TestDraftReplyCLI:
     def test_default_saves_draft(self, mock_client, mock_email, capsys):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
-            with patch("mailroom.smtp_client.create_mime") as mock_create:
+            with patch("courier.smtp_client.create_mime") as mock_create:
                 mock_create.return_value = MagicMock()
                 result = runner.invoke(
                     app,
@@ -275,7 +275,7 @@ class TestDraftReplyCLI:
 
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         out_path = str(tmp_path / "reply.eml")
@@ -285,10 +285,10 @@ class TestDraftReplyCLI:
         mime_msg["Subject"] = "Re: Test"
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
-            with patch("mailroom.smtp_client.create_mime", return_value=mime_msg):
+            with patch("courier.smtp_client.create_mime", return_value=mime_msg):
                 result = runner.invoke(
                     app,
                     [
@@ -316,7 +316,7 @@ class TestDraftReplyCLI:
 
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
 
@@ -325,10 +325,10 @@ class TestDraftReplyCLI:
         mime_msg["Subject"] = "Re: Stdout"
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
-            with patch("mailroom.smtp_client.create_mime", return_value=mime_msg):
+            with patch("courier.smtp_client.create_mime", return_value=mime_msg):
                 result = runner.invoke(
                     app,
                     [
@@ -353,13 +353,13 @@ class TestDraftReplyCLI:
     def test_bcc_in_raw_output(self, mock_client, mock_email, tmp_path):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         out_path = str(tmp_path / "reply_bcc.eml")
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -388,14 +388,14 @@ class TestDraftReplyCLI:
     def test_email_not_found(self):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         client = MagicMock()
         client.fetch_email.return_value = None
 
         with (
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__._make_client", return_value=client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -419,17 +419,17 @@ class TestDraftReplyCLI:
         """CLI --attach plumbs through to create_mime in draft branch."""
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         f = tmp_path / "file.txt"
         f.write_text("x")
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
-            with patch("mailroom.smtp_client.create_mime") as mock_create:
+            with patch("courier.smtp_client.create_mime") as mock_create:
                 mock_create.return_value = MagicMock()
                 result = runner.invoke(
                     app,
@@ -457,14 +457,14 @@ class TestDraftReplyCLI:
         """--attach with --output emits a real MIME part into stdout."""
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         f = tmp_path / "doc.txt"
         f.write_text("hello")
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -515,9 +515,9 @@ class TestMcpReplyAttachments:
         f = tmp_path / "a.txt"
         f.write_text("hi")
 
-        with patch("mailroom.tools.get_client_from_context", return_value=imap_client):
+        with patch("courier.tools.get_client_from_context", return_value=imap_client):
             with patch(
-                "mailroom.smtp_client.compose_and_save_reply_draft"
+                "courier.smtp_client.compose_and_save_reply_draft"
             ) as mock_compose:
                 mock_compose.return_value = {"status": "success", "draft_uid": 1}
                 await draft_reply(

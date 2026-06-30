@@ -1,7 +1,7 @@
 """Identity resolution: which From identity to use, and which SMTP route it takes.
 
 Resolution rules are documented in examples/config.sample.toml. This module
-turns a parsed ``MailroomConfig`` plus context (an explicit From, a parent
+turns a parsed ``CourierConfig`` plus context (an explicit From, a parent
 email being replied to, etc.) into the concrete ``Identity`` and
 ``SmtpConfig`` that the SMTP transport will use.
 
@@ -21,7 +21,7 @@ into clean exit-1 errors rather than tracebacks:
 from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
-from mailroom.config import Identity, ImapBlock, MailroomConfig, SmtpConfig
+from courier.config import CourierConfig, Identity, ImapBlock, SmtpConfig
 
 
 class SendDisabled(LookupError):
@@ -80,7 +80,7 @@ class SmtpUnresolved(LookupError):
         )
 
 
-def identities_for_imap(cfg: MailroomConfig, imap_name: str) -> List[Identity]:
+def identities_for_imap(cfg: CourierConfig, imap_name: str) -> List[Identity]:
     """Return identities pointing at the given [imap.NAME] block.
 
     Order matches the order in which identities appear in the config file.
@@ -90,12 +90,12 @@ def identities_for_imap(cfg: MailroomConfig, imap_name: str) -> List[Identity]:
 
 
 def resolve_identity_for_send(
-    cfg: MailroomConfig, imap_name: str, from_addr: Optional[str] = None
+    cfg: CourierConfig, imap_name: str, from_addr: Optional[str] = None
 ) -> Identity:
     """Pick the identity to send from.
 
     Args:
-        cfg: Parsed mailroom configuration.
+        cfg: Parsed courier configuration.
         imap_name: Name of the selected [imap.NAME] block.
         from_addr: Optional explicit From address (e.g. from ``--from``).
 
@@ -124,16 +124,16 @@ def resolve_identity_for_send(
 
 
 def resolve_identity_for_reply(
-    cfg: MailroomConfig, imap_name: str, email_obj: Any
+    cfg: CourierConfig, imap_name: str, email_obj: Any
 ) -> Identity:
     """Pick the reply-from identity by matching the parent email's recipients.
 
     Walks ``email_obj.to`` then ``email_obj.cc``, returning the identity
     whose address matches any of those recipients. This is what tells
-    mailroom "the user received this on alias X, so reply as X".
+    courier "the user received this on alias X, so reply as X".
 
     Args:
-        cfg: Parsed mailroom configuration.
+        cfg: Parsed courier configuration.
         imap_name: Name of the selected [imap.NAME] block.
         email_obj: An ``Email`` model with ``.to`` and ``.cc`` lists of
             objects exposing ``.address``.

@@ -190,7 +190,7 @@ class MuBackend:
         Args:
             imap_block: [imap.NAME] block whose ``maildir`` defines the
                 search scope.  Must have ``maildir`` configured.
-            query: User query string in mailroom syntax.
+            query: User query string in courier syntax.
             limit: Maximum number of results to return.
             folder: When given, narrow the search to that one IMAP folder
                 (exact, non-recursive); when ``None``, search the whole
@@ -296,7 +296,7 @@ class MuBackend:
     def _format_result(
         self, imap_block: ImapBlock, rec: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Translate a single mu json record into mailroom result shape.
+        """Translate a single mu json record into courier result shape.
 
         UID is parsed from the mbsync-style ``,U=N,`` segment of the
         filename when present so search→read piping works uniformly with

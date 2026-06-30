@@ -9,8 +9,8 @@ from email.message import EmailMessage
 
 import pytest
 
-from mailroom.config import SmtpConfig
-from mailroom.smtp_transport import (
+from courier.config import SmtpConfig
+from courier.smtp_transport import (
     parse_ses_token,
     rewrite_message_id,
     send,

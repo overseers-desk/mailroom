@@ -7,16 +7,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.imap_client import ImapClient
-from mailroom.models import Email, EmailAddress, EmailContent
-from mailroom.query_parser import parse_query
-from mailroom.tools import register_tools
+from courier.imap_client import ImapClient
+from courier.models import Email, EmailAddress, EmailContent
+from courier.query_parser import parse_query
+from courier.tools import register_tools
 
 
 # Patch the get_client_from_context function to use our mock client
 @pytest.fixture(autouse=True)
 def patch_get_client():
-    with patch("mailroom.tools.get_client_from_context") as mock_get_client:
+    with patch("courier.tools.get_client_from_context") as mock_get_client:
         yield mock_get_client
 
 
@@ -497,7 +497,7 @@ class TestTools:
         self, tools, mock_client, mock_context
     ):
         """When the email carries cc / attachments, both surface in the result."""
-        from mailroom.models import EmailAttachment
+        from courier.models import EmailAttachment
 
         read = tools["read"]
         with_extras = Email(

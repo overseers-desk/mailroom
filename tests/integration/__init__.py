@@ -1,1 +1,1 @@
-"""Integration tests for the Mailroom."""
+"""Integration tests for the Courier."""

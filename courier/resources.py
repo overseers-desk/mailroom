@@ -6,8 +6,8 @@ from typing import Any, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.imap_client import ImapClient
-from mailroom.query_parser import parse_query
+from courier.imap_client import ImapClient
+from courier.query_parser import parse_query
 
 logger = logging.getLogger(__name__)
 

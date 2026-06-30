@@ -6,9 +6,9 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-from mailroom.browser_auth import load_client_credentials
-from mailroom.config import OAuth2Config
-from mailroom.oauth2 import exchange_code_for_tokens, get_authorization_url
+from courier.browser_auth import load_client_credentials
+from courier.config import OAuth2Config
+from courier.oauth2 import exchange_code_for_tokens, get_authorization_url
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

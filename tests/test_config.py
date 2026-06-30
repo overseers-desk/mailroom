@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from mailroom.config import (
+from courier.config import (
+    CourierConfig,
     Identity,
     ImapBlock,
-    MailroomConfig,
     SmtpConfig,
     load_config,
     load_config_with_warnings,
@@ -180,7 +180,7 @@ class TestImapBlock:
         """A valid sieve file is parsed at config-load and stashed as a callable."""
         sieve_path = tmp_path / "rules.sieve"
         sieve_path.write_text(
-            'require ["mailroom-policy"];\n' 'if address :is "from" "x@y" { redact; }\n'
+            'require ["courier-policy"];\n' 'if address :is "from" "x@y" { redact; }\n'
         )
         d = {
             "host": "imap.example.com",
@@ -194,7 +194,7 @@ class TestImapBlock:
     def test_redact_relative_resolves_against_config_dir(self, tmp_path):
         """Relative redact paths resolve against the config directory."""
         (tmp_path / "rules.sieve").write_text(
-            'require ["mailroom-policy"];\n' 'if address :is "from" "x@y" { redact; }\n'
+            'require ["courier-policy"];\n' 'if address :is "from" "x@y" { redact; }\n'
         )
         d = {
             "host": "imap.example.com",
@@ -241,14 +241,14 @@ class TestImapBlock:
             ImapBlock.from_dict(d, name="acc")
 
 
-class TestMailroomConfig:
-    """Test cases for MailroomConfig."""
+class TestCourierConfig:
+    """Test cases for CourierConfig."""
 
     def test_default_imap_explicit(self):
         """Test explicit default_imap."""
         block_a = ImapBlock(host="h", port=993, username="u", password="p")
         block_b = ImapBlock(host="h", port=993, username="u", password="p")
-        cfg = MailroomConfig(
+        cfg = CourierConfig(
             imap_blocks={"a": block_a, "b": block_b},
             _default_imap="b",
         )
@@ -257,7 +257,7 @@ class TestMailroomConfig:
     def test_default_imap_fallback(self):
         """Test default_imap falls back to first block."""
         block = ImapBlock(host="h", port=993, username="u", password="p")
-        cfg = MailroomConfig(imap_blocks={"first": block})
+        cfg = CourierConfig(imap_blocks={"first": block})
         assert cfg.default_imap == "first"
 
 
@@ -287,7 +287,7 @@ password = "secret"
 
             config = load_config(f.name)
 
-            assert isinstance(config, MailroomConfig)
+            assert isinstance(config, CourierConfig)
             assert config.default_imap == "work"
             assert "personal" in config.imap_blocks
             assert "work" in config.imap_blocks
@@ -337,7 +337,7 @@ host = "imap.example.com"
 username = "test@example.com"
 password = "password"
 """
-        temp_dir = tmp_path / ".config" / "mailroom"
+        temp_dir = tmp_path / ".config" / "courier"
         temp_dir.mkdir(parents=True, exist_ok=True)
         temp_file = temp_dir / "config.toml"
         temp_file.write_bytes(toml_content.encode())
@@ -345,7 +345,7 @@ password = "password"
         original_expanduser = Path.expanduser
 
         def mock_expanduser(self):
-            if str(self) == "~/.config/mailroom/config.toml":
+            if str(self) == "~/.config/courier/config.toml":
                 return temp_file
             return original_expanduser(self)
 
@@ -674,13 +674,13 @@ class TestValidateDisplayName:
     """
 
     def test_accepts_quote_free_name(self):
-        from mailroom.config import validate_display_name
+        from courier.config import validate_display_name
 
         for name in ["Smith Jane", "O'Brien", "Anne-Marie", "Dr. Smith", ""]:
             validate_display_name(name, "--name")
 
     def test_rejects_each_forbidden_class(self):
-        from mailroom.config import validate_display_name
+        from courier.config import validate_display_name
 
         for bad in ["a, b", "a (b)", "a@b", 'a "b"', "a\nb", "a\rb", "a\x00b"]:
             with pytest.raises(
@@ -689,7 +689,7 @@ class TestValidateDisplayName:
                 validate_display_name(bad, "--name")
 
     def test_error_message_carries_caller_prefix(self):
-        from mailroom.config import validate_display_name
+        from courier.config import validate_display_name
 
         with pytest.raises(ValueError, match=r"\[identity\.alice\]"):
             validate_display_name("Bad, Name", "[identity.alice]")
@@ -699,22 +699,22 @@ class TestValidateDisplayName:
 
 class TestSmtpHasOwnCreds:
     def test_true_when_both_set(self):
-        from mailroom.config import smtp_has_own_creds
+        from courier.config import smtp_has_own_creds
 
         assert smtp_has_own_creds(SmtpConfig(host="x", username="u", password="p"))
 
     def test_false_when_either_missing(self):
-        from mailroom.config import smtp_has_own_creds
+        from courier.config import smtp_has_own_creds
 
         assert not smtp_has_own_creds(SmtpConfig(host="x"))
         assert not smtp_has_own_creds(SmtpConfig(host="x", username="u"))
         assert not smtp_has_own_creds(SmtpConfig(host="x", password="p"))
 
 
-class TestMailroomCrossRefs:
+class TestCourierCrossRefs:
     """Cross-reference checks across [imap.*], [smtp.*], [identity.*]."""
 
-    def _toml_with(self, content: str) -> "MailroomConfig":
+    def _toml_with(self, content: str) -> "CourierConfig":
         with tempfile.NamedTemporaryFile(suffix=".toml", mode="wb", delete=False) as f:
             f.write(content.encode())
             f.flush()
@@ -843,7 +843,7 @@ default_smtp = "gmail"
 class TestConfigWarnings:
     """Non-fatal warnings collected on the config object."""
 
-    def _toml_with(self, content: str) -> "MailroomConfig":
+    def _toml_with(self, content: str) -> "CourierConfig":
         with tempfile.NamedTemporaryFile(suffix=".toml", mode="wb", delete=False) as f:
             f.write(content.encode())
             f.flush()
@@ -1054,5 +1054,5 @@ address = "u@example.com"
             f.write(toml_content.encode())
             f.flush()
             cfg, warnings = load_config_with_warnings(f.name)
-        assert isinstance(cfg, MailroomConfig)
+        assert isinstance(cfg, CourierConfig)
         assert warnings is cfg.warnings

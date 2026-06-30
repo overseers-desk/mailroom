@@ -1,7 +1,7 @@
-"""Tests for the ``mailroom install-claude-command`` installer.
+"""Tests for the ``courier install-claude-command`` installer.
 
 The installer writes the Claude Code command file to
-``~/.claude/commands/mailroom.md``. When an older version is already
+``~/.claude/commands/courier.md``. When an older version is already
 present it prompts before replacing, except under ``--yes`` so that
 non-interactive callers (Claude Code sessions, which cannot answer a
 stdin prompt) can update without blocking.
@@ -11,14 +11,14 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from mailroom import __version__
-from mailroom.__main__ import app
+from courier import __version__
+from courier.__main__ import app
 
 runner = CliRunner()
 
 
 def _command_file(home: Path) -> Path:
-    return home / ".claude" / "commands" / "mailroom.md"
+    return home / ".claude" / "commands" / "courier.md"
 
 
 def _install_stale(home: Path) -> Path:

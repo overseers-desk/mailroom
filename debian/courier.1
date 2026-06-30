@@ -1,14 +1,14 @@
-.TH MAILROOM 1 "April 2026" "mailroom 1.0.3" "User Commands"
+.TH COURIER 1 "April 2026" "courier 1.0.3" "User Commands"
 .SH NAME
-mailroom \- email toolkit for AI assistants and command\-line scripting
+courier \- email toolkit for AI assistants and command\-line scripting
 .SH SYNOPSIS
-.B mailroom
+.B courier
 [\fB\-\-config\fR \fIFILE\fR]
 [\fB\-\-account\fR \fINAME\fR]
 [\fB\-\-verbose\fR]
 \fICOMMAND\fR [\fIARGS\fR]
 .SH DESCRIPTION
-.B mailroom
+.B courier
 provides CLI commands for searching, reading, moving, flagging, and
 replying to emails over IMAP. It can also run an MCP (Model Context
 Protocol) server for integration with AI assistants.
@@ -16,7 +16,7 @@ Protocol) server for integration with AI assistants.
 .TP
 \fB\-c\fR, \fB\-\-config\fR \fIFILE\fR
 Path to TOML configuration file. May also be set via the
-\fBMAILROOM_CONFIG\fR environment variable.
+\fBCOURIER_CONFIG\fR environment variable.
 .TP
 \fB\-a\fR, \fB\-\-account\fR \fINAME\fR
 Account name for multi\-account configurations. Uses the default account
@@ -89,14 +89,14 @@ Process a meeting invite and create a draft reply.
 Start the MCP server. Requires the optional \fBmcp\fR Python package.
 .SH ENVIRONMENT
 .TP
-\fBMAILROOM_CONFIG\fR
+\fBCOURIER_CONFIG\fR
 Path to the TOML configuration file, used when \fB\-\-config\fR is not
 given.
 .SH FILES
 .TP
-.I ~/.config/mailroom/config.toml
+.I ~/.config/courier/config.toml
 Default configuration file. See
-.I /usr/share/doc/mailroom/examples/config.sample.toml
+.I /usr/share/doc/courier/examples/config.sample.toml
 for a sample.
 .SH AUTHOR
 Weiwu Zhang

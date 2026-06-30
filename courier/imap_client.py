@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import imapclient  # type: ignore[import-untyped]
 
-from mailroom.config import ImapBlock
-from mailroom.models import Email
-from mailroom.oauth2 import get_access_token
-from mailroom.query_parser import parse_query
+from courier.config import ImapBlock
+from courier.models import Email
+from courier.oauth2 import get_access_token
+from courier.query_parser import parse_query
 
 if TYPE_CHECKING:
-    from mailroom.local_cache import MuBackend
+    from courier.local_cache import MuBackend
 
 
 # mbsync encodes flags in the maildir filename suffix after ``:2,``.
@@ -1389,8 +1389,8 @@ class ImapClient:
             from the ``provenance.fell_back_reason`` vocabulary.
         """
         # Late import to avoid a circular dependency.
-        from mailroom.local_cache import MuFailure
-        from mailroom.query_parser import UntranslatableQuery
+        from courier.local_cache import MuFailure
+        from courier.query_parser import UntranslatableQuery
 
         if self.local_cache is None or not self.block.maildir:
             return None, None

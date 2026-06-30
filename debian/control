@@ -1,4 +1,4 @@
-Source: mailroom
+Source: courier
 Section: mail
 Priority: optional
 Maintainer: Weiwu Zhang <a@colourful.land>
@@ -9,10 +9,10 @@ Build-Depends:
  python3-all,
  python3-setuptools,
 Standards-Version: 4.6.2
-Homepage: https://github.com/overseers-desk/mailroom
+Homepage: https://github.com/overseers-desk/courier
 Rules-Requires-Root: no
 
-Package: mailroom
+Package: courier
 Architecture: all
 Depends:
  ${python3:Depends},
@@ -27,7 +27,7 @@ Depends:
 Suggests:
  python3-flask,
 Description: Email toolkit for AI assistants and command-line scripting
- Mailroom provides CLI commands for searching, reading, moving, flagging,
+ Courier provides CLI commands for searching, reading, moving, flagging,
  and replying to emails over IMAP. It also offers an MCP (Model Context
  Protocol) server mode for integration with AI assistants.
  .

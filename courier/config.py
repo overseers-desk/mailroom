@@ -1,4 +1,4 @@
-"""Configuration handling for Mailroom.
+"""Configuration handling for Courier.
 
 The on-disk schema has three named-entity tables at the top level:
 
@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dotenv import load_dotenv
 
-# Display-name characters mailroom refuses to accept on configured
+# Display-name characters courier refuses to accept on configured
 # identities. Two groups, both rejected at config-load time:
 #
 #   1. C0 control characters and DEL. Header-injection vector (LF/CR) and
@@ -45,7 +45,7 @@ _INVALID_DISPLAY_NAME_RE = re.compile(r"[\x00-\x08\x0a-\x1f\x7f,()<>\[\]:;@\\\"]
 
 
 def validate_display_name(name: str, where: str) -> None:
-    """Reject display names containing characters mailroom won't carry.
+    """Reject display names containing characters courier won't carry.
 
     The same check is applied at config-load time on ``[identity.NAME]``
     blocks and at CLI-parse time on ``compose --send --smtp ... --name``.
@@ -252,7 +252,7 @@ class SmtpConfig:
         """Resolve ``"auto"`` save_sent to a concrete bool based on host.
 
         Returns false for Gmail hosts (server auto-files outgoing into Sent),
-        true for everything else (mailroom must FCC manually).
+        true for everything else (courier must FCC manually).
         """
         if self.save_sent == "auto":
             return not (
@@ -511,7 +511,7 @@ class ImapBlock:
             # Import locally to keep the public config import surface small
             # and to avoid a hard dependency on sievelib for callers that
             # never touch the redact field.
-            from mailroom.sieve_filter import compile_policy
+            from courier.sieve_filter import compile_policy
 
             try:
                 redact_policy = compile_policy(str(resolved))
@@ -540,8 +540,8 @@ class ImapBlock:
 
 
 @dataclass
-class MailroomConfig:
-    """Top-level mailroom configuration.
+class CourierConfig:
+    """Top-level courier configuration.
 
     Attributes:
         imap_blocks: All [imap.NAME] blocks, keyed by name.
@@ -570,14 +570,14 @@ class MailroomConfig:
         cls,
         data: Dict[str, Any],
         config_dir: Optional[Path] = None,
-    ) -> "MailroomConfig":
+    ) -> "CourierConfig":
         """Create top-level configuration from a parsed-TOML dictionary.
 
         Parses ``[smtp.*]``, ``[imap.*]`` and ``[identity.*]`` blocks,
         validates cross-references (default_smtp, identity.smtp must name
         a defined SMTP block; identity.imap must name a defined IMAP
         block), and collects non-fatal warnings on
-        ``MailroomConfig.warnings``.
+        ``CourierConfig.warnings``.
 
         Args:
             data: Parsed top-level TOML dictionary.
@@ -677,7 +677,7 @@ class MailroomConfig:
         return cfg
 
 
-def _collect_warnings(cfg: MailroomConfig) -> List[str]:
+def _collect_warnings(cfg: CourierConfig) -> List[str]:
     """Walk the config and emit non-fatal advisories.
 
     Warnings are surfaced to the user on no-args/--help and after
@@ -782,7 +782,7 @@ def _load_config_data(
         ValueError: If no configuration source is available
     """
     default_locations = [
-        Path("~/.config/mailroom/config.toml"),
+        Path("~/.config/courier/config.toml"),
     ]
 
     config_data: Dict[str, Any] = {}
@@ -843,14 +843,14 @@ def _load_config_data(
     return config_data, config_dir
 
 
-def load_config(config_path: Optional[str] = None) -> MailroomConfig:
+def load_config(config_path: Optional[str] = None) -> CourierConfig:
     """Load configuration from file or environment variables.
 
     Args:
         config_path: Path to configuration file
 
     Returns:
-        Top-level mailroom configuration with ``warnings`` populated.
+        Top-level courier configuration with ``warnings`` populated.
 
     Raises:
         ValueError: If configuration is invalid
@@ -858,14 +858,14 @@ def load_config(config_path: Optional[str] = None) -> MailroomConfig:
     config_data, config_dir = _load_config_data(config_path)
 
     try:
-        return MailroomConfig.from_dict(config_data, config_dir=config_dir)
+        return CourierConfig.from_dict(config_data, config_dir=config_dir)
     except KeyError as e:
         raise ValueError(f"Missing required configuration: {e}")
 
 
 def load_config_with_warnings(
     config_path: Optional[str] = None,
-) -> Tuple[MailroomConfig, List[str]]:
+) -> Tuple[CourierConfig, List[str]]:
     """Load configuration and return ``(cfg, warnings)`` explicitly.
 
     Sugar over ``load_config`` for callers (CLI, validator script) that want

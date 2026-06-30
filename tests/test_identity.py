@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from mailroom.config import Identity, ImapBlock, MailroomConfig, SmtpConfig
-from mailroom.identity import (
+from courier.config import CourierConfig, Identity, ImapBlock, SmtpConfig
+from courier.identity import (
     IdentityNotFound,
     SendDisabled,
     SmtpUnresolved,
@@ -32,9 +32,9 @@ def _block(username: str = "login@gmail.com") -> ImapBlock:
     )
 
 
-def _cfg_with_identities(identities: dict[str, Identity]) -> MailroomConfig:
-    """Build a one-block MailroomConfig with the given identities dict."""
-    return MailroomConfig(
+def _cfg_with_identities(identities: dict[str, Identity]) -> CourierConfig:
+    """Build a one-block CourierConfig with the given identities dict."""
+    return CourierConfig(
         imap_blocks={"acct": _block()},
         identities=identities,
         _default_imap="acct",
@@ -55,7 +55,7 @@ def _email_stub(to=None, cc=None):
 
 class TestIdentitiesForImap:
     def test_filters_by_imap(self):
-        cfg = MailroomConfig(
+        cfg = CourierConfig(
             imap_blocks={"a": _block(), "b": _block(username="other@x.com")},
             identities={
                 "alice": Identity(imap="a", address="alice@x.com"),
@@ -70,7 +70,7 @@ class TestIdentitiesForImap:
         assert [i.address for i in b_idents] == ["bob@x.com"]
 
     def test_empty_when_no_identities_point_at_block(self):
-        cfg = MailroomConfig(
+        cfg = CourierConfig(
             imap_blocks={"a": _block()},
             identities={},
             _default_imap="a",

@@ -19,7 +19,7 @@ import smtplib
 from email.parser import BytesParser
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from mailroom.config import SmtpConfig
+from courier.config import SmtpConfig
 
 # Post-DATA "Ok <token>" line from SES. Real tokens look like
 # "010f01a8e6c8e7d2-9eaeb4d6-fcb5-4b04-bc89-3d8e36f5db7e-000000": hex chunks

@@ -1,8 +1,8 @@
 """Unit and CLI tests for the verb-chain dispatcher and the chain output shape.
 
-Mailroom's read-only verbs (``search``, ``read``) chain at the top level:
+Courier's read-only verbs (``search``, ``read``) chain at the top level:
 
-    mailroom search foo search bar read -f INBOX -u 42
+    courier search foo search bar read -f INBOX -u 42
 
 The dispatcher pre-scans argv before typer runs. With one chainable verb the
 dispatcher returns and typer dispatches normally, so single-op invocations and
@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from mailroom.__main__ import (
+from courier.__main__ import (
     _apply_global_flags,
     _build_op_key,
     _empty_result_for_subcmd,
@@ -377,7 +377,7 @@ class TestExecuteChain:
         client.search_emails.return_value = _fake_search_result("q")
         return client
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_single_search_wraps_in_op_key(self, mock_soft):
         mock_soft.return_value = self._make_client()
         ops = [
@@ -392,7 +392,7 @@ class TestExecuteChain:
         assert "acct1" in result["search from:foo"]
         assert "results" in result["search from:foo"]["acct1"]
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_two_ops_produce_two_outer_keys(self, mock_soft):
         mock_soft.return_value = self._make_client()
         ops = [
@@ -410,7 +410,7 @@ class TestExecuteChain:
         result = _execute_chain(ops, ["acct1"])
         assert set(result.keys()) == {"search from:a", "search from:b"}
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_one_connection_per_account(self, mock_soft):
         client = self._make_client()
         mock_soft.return_value = client
@@ -430,14 +430,14 @@ class TestExecuteChain:
         assert mock_soft.call_count == 1
         assert client.disconnect.call_count == 1
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_sequential_accounts_two_connections(self, mock_soft):
         mock_soft.return_value = self._make_client()
         ops = [("search q", "search", {"query": "q", "folder": None, "limit": 10})]
         _execute_chain(ops, ["acct1", "acct2"])
         assert mock_soft.call_count == 2
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_failed_connection_produces_empty_result(self, mock_soft):
         mock_soft.return_value = None
         ops = [("search q", "search", {"query": "q", "folder": None, "limit": 10})]
@@ -445,7 +445,7 @@ class TestExecuteChain:
         assert "acct1" in result["search q"]
         assert "results" in result["search q"]["acct1"]
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_runtime_error_produces_error_dict(self, mock_soft):
         client = MagicMock()
         client.search_emails.side_effect = RuntimeError("timeout")
@@ -455,7 +455,7 @@ class TestExecuteChain:
         assert "error" in result["search q"]["acct1"]
         assert "timeout" in result["search q"]["acct1"]["error"]
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_valueerror_propagates(self, mock_soft):
         client = MagicMock()
         client.search_emails.side_effect = ValueError("bad query")
@@ -464,7 +464,7 @@ class TestExecuteChain:
         with pytest.raises(ValueError, match="bad query"):
             _execute_chain(ops, ["acct1"])
 
-    @patch("mailroom.__main__._make_client_soft")
+    @patch("courier.__main__._make_client_soft")
     def test_multi_account_results_keyed_by_account(self, mock_soft):
         def make(name):
             c = MagicMock()
@@ -485,7 +485,7 @@ class TestExecuteChain:
 
 
 def _patch_config(imap_name: str = "default"):
-    from mailroom.config import ImapBlock, MailroomConfig
+    from courier.config import CourierConfig, ImapBlock
 
     block = ImapBlock(
         host="imap.example.com",
@@ -494,8 +494,8 @@ def _patch_config(imap_name: str = "default"):
         password="secret",
         use_ssl=True,
     )
-    cfg = MailroomConfig(imap_blocks={imap_name: block}, _default_imap=imap_name)
-    return patch("mailroom.__main__.load_config", return_value=cfg)
+    cfg = CourierConfig(imap_blocks={imap_name: block}, _default_imap=imap_name)
+    return patch("courier.__main__.load_config", return_value=cfg)
 
 
 def _patch_search_client(result=None):
@@ -507,7 +507,7 @@ def _patch_search_client(result=None):
         client.search_emails.return_value = result
         return client
 
-    return patch("mailroom.__main__._make_client_soft", side_effect=factory)
+    return patch("courier.__main__._make_client_soft", side_effect=factory)
 
 
 class TestRunChain:
@@ -546,7 +546,7 @@ class TestRunChain:
 
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+            patch("courier.__main__._make_client_soft", side_effect=factory),
         ):
             code = _run_chain(
                 [("search", ["foo"]), ("read", ["-f", "INBOX", "-u", "1"])], "json"
@@ -579,7 +579,7 @@ class TestRunChain:
         client.search_emails.side_effect = ValueError("bad query")
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", return_value=client),
+            patch("courier.__main__._make_client_soft", return_value=client),
         ):
             code = _run_chain([("search", ["foo"]), ("search", ["bar"])], "json")
         assert code == 2
@@ -629,7 +629,7 @@ class TestRunChain:
 
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+            patch("courier.__main__._make_client_soft", side_effect=factory),
         ):
             code = _run_chain(
                 [("search", ["a"]), ("search", ["b"]), ("search", ["c"])],
@@ -655,7 +655,7 @@ class TestRunChain:
 
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+            patch("courier.__main__._make_client_soft", side_effect=factory),
         ):
             code = _run_chain(
                 [("search", ["-n", "5", "a"]), ("search", ["b"])],
@@ -681,7 +681,7 @@ class TestRunChain:
 
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+            patch("courier.__main__._make_client_soft", side_effect=factory),
         ):
             code = _run_chain(
                 [("search", ["a"]), ("search", ["b"])],
@@ -715,7 +715,7 @@ class TestRunChain:
 
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+            patch("courier.__main__._make_client_soft", side_effect=factory),
         ):
             # read has only -u; chain default supplies folder
             code = _run_chain(
@@ -767,7 +767,7 @@ class TestSingleOpUnchanged:
 
         with (
             _patch_config(),
-            patch("mailroom.__main__._make_client_soft", side_effect=factory),
+            patch("courier.__main__._make_client_soft", side_effect=factory),
         ):
             result = runner.invoke(app, ["search", "from:alice", "--no-cache"])
 
@@ -785,7 +785,7 @@ class TestSingleOpUnchanged:
 class TestApplyGlobalFlags:
     def test_imap_repeats(self):
         _apply_global_flags(["--imap", "a", "--imap", "b"])
-        from mailroom.__main__ import _imap_names
+        from courier.__main__ import _imap_names
 
         assert _imap_names == ["a", "b"]
         # reset for other tests
@@ -793,21 +793,21 @@ class TestApplyGlobalFlags:
 
     def test_imap_equals_form(self):
         _apply_global_flags(["--imap=a", "--imap=b"])
-        from mailroom.__main__ import _imap_names
+        from courier.__main__ import _imap_names
 
         assert _imap_names == ["a", "b"]
         _apply_global_flags([])
 
     def test_all_imap_flag(self):
         _apply_global_flags(["-A"])
-        from mailroom.__main__ import _all_imap
+        from courier.__main__ import _all_imap
 
         assert _all_imap is True
         _apply_global_flags([])
 
     def test_config_flag(self):
         _apply_global_flags(["-c", "/tmp/x.toml"])
-        from mailroom.__main__ import _config_path
+        from courier.__main__ import _config_path
 
         assert _config_path == "/tmp/x.toml"
         _apply_global_flags([])

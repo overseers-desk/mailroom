@@ -15,18 +15,18 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from mailroom.__main__ import app
-from mailroom.config import (
+from courier.__main__ import app
+from courier.config import (
+    CourierConfig,
     Identity,
     ImapBlock,
-    MailroomConfig,
     SmtpConfig,
 )
 
 runner = CliRunner()
 
 
-def _cfg() -> MailroomConfig:
+def _cfg() -> CourierConfig:
     """Two-identity block on a Fastmail-style SMTP so FCC actually runs."""
     block = ImapBlock(
         host="imap.fastmail.com",
@@ -35,7 +35,7 @@ def _cfg() -> MailroomConfig:
         password="p",
         default_smtp="fast",
     )
-    return MailroomConfig(
+    return CourierConfig(
         imap_blocks={"acct": block},
         _default_imap="acct",
         identities={
@@ -53,7 +53,7 @@ def _cfg() -> MailroomConfig:
     )
 
 
-def _cfg_with_relay() -> MailroomConfig:
+def _cfg_with_relay() -> CourierConfig:
     """Adds an SES-style relay block with its own credentials, plus a
     second IMAP block usable as an --fcc target.
     """
@@ -107,9 +107,9 @@ class TestComposeSendModeA:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -138,8 +138,8 @@ class TestComposeSendModeA:
     def test_unknown_identity_errors(self):
         cfg = _cfg()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -162,10 +162,10 @@ class TestComposeSendModeA:
         cfg = _cfg()
         client = _client()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ),
         ):
@@ -203,9 +203,9 @@ class TestComposeSendModeB:
 
         # No --fcc, no BCC self-copy => --allow-no-copy required.
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -240,9 +240,9 @@ class TestComposeSendModeB:
         --allow-no-copy, the send is refused."""
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -276,9 +276,9 @@ class TestComposeSendModeB:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -316,9 +316,9 @@ class TestComposeSendModeB:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -348,8 +348,8 @@ class TestComposeSendModeB:
         SMTP work."""
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -374,10 +374,10 @@ class TestComposeSendModeB:
         cfg = _cfg_with_relay()
         client = _client()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client) as mc,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client) as mc,
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ),
         ):
@@ -414,8 +414,8 @@ class TestComposeSendModeB:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -443,8 +443,8 @@ class TestComposeSendModeB:
     def test_smtp_without_from_errors(self):
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -465,8 +465,8 @@ class TestComposeSendModeB:
     def test_credential_less_smtp_rejected(self):
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -490,8 +490,8 @@ class TestComposeSendModeB:
     def test_invalid_display_name_rejected(self):
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -517,8 +517,8 @@ class TestComposeSendModeB:
     def test_fcc_unknown_imap_block_rejected(self):
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -544,8 +544,8 @@ class TestComposeSendModeB:
     def test_fcc_missing_colon_rejected(self):
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -572,8 +572,8 @@ class TestComposeSendNoRoute:
     def test_no_identity_no_smtp_errors(self):
         cfg = _cfg()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -594,8 +594,8 @@ class TestComposeSendNoRoute:
     def test_identity_and_smtp_mutually_exclusive(self):
         cfg = _cfg_with_relay()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -620,7 +620,7 @@ class TestComposeSendNoRoute:
 class TestComposeNonSendIgnoresModeFlags:
     def test_send_and_output_mutually_exclusive(self):
         cfg = _cfg()
-        with patch("mailroom.__main__.load_config", return_value=cfg):
+        with patch("courier.__main__.load_config", return_value=cfg):
             result = runner.invoke(
                 app,
                 [
@@ -644,8 +644,8 @@ class TestComposeNonSendIgnoresModeFlags:
         cfg = _cfg()
         client = _client()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
         ):
             result = runner.invoke(
                 app,
@@ -659,7 +659,7 @@ class TestComposeNonSendIgnoresModeFlags:
 
     def test_mode_flags_rejected_in_drafting(self):
         cfg = _cfg()
-        with patch("mailroom.__main__.load_config", return_value=cfg):
+        with patch("courier.__main__.load_config", return_value=cfg):
             result = runner.invoke(
                 app,
                 [
@@ -679,7 +679,7 @@ class TestComposeNonSendIgnoresModeFlags:
 class TestReplySend:
     @staticmethod
     def _parent_alias():
-        from mailroom.models import Email, EmailAddress, EmailContent
+        from courier.models import Email, EmailAddress, EmailContent
 
         return Email(
             uid=10,
@@ -692,7 +692,7 @@ class TestReplySend:
 
     @staticmethod
     def _parent_unrelated():
-        from mailroom.models import Email, EmailAddress, EmailContent
+        from courier.models import Email, EmailAddress, EmailContent
 
         return Email(
             uid=10,
@@ -714,9 +714,9 @@ class TestReplySend:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -744,9 +744,9 @@ class TestReplySend:
         client = _client()
         client.fetch_email.return_value = self._parent_unrelated()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -770,10 +770,10 @@ class TestReplySend:
         client = _client()
         client.fetch_email.return_value = self._parent_alias()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ),
         ):
@@ -802,8 +802,8 @@ class TestReplySend:
         client = _client()
         client.fetch_email.return_value = self._parent_unrelated()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
         ):
             result = runner.invoke(
                 app,
@@ -836,10 +836,10 @@ class TestComposeSendFccVerification:
         cfg = _cfg()
         client = _client(default_sent="INBOX.Sent")
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ),
         ):
@@ -869,9 +869,9 @@ class TestComposeSendFccVerification:
         client = _client()
         client.resolve_sent_folder.side_effect = lambda configured=None: None
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -916,9 +916,9 @@ class TestComposeSendFccVerification:
             None if configured == "Sent" else "INBOX.Sent"
         )
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -951,10 +951,10 @@ class TestComposeSendCopyRetention:
         cfg = _cfg()
         client = _client()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ),
         ):
@@ -984,10 +984,10 @@ class TestComposeSendCopyRetention:
         --allow-no-copy is needed and no IMAP connection is opened."""
         cfg = _cfg()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ),
         ):
@@ -1017,8 +1017,8 @@ class TestComposeSendCopyRetention:
         self-copy: refuse."""
         cfg = _cfg()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -1044,10 +1044,10 @@ class TestComposeSendCopyRetention:
     def test_no_save_sent_third_party_bcc_with_allow_no_copy_sends(self):
         cfg = _cfg()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
             patch(
-                "mailroom.smtp_transport.send",
+                "courier.smtp_transport.send",
                 return_value=(b"raw", _result()),
             ) as send_mock,
         ):
@@ -1075,8 +1075,8 @@ class TestComposeSendCopyRetention:
     def test_no_save_sent_without_bcc_or_override_refuses(self):
         cfg = _cfg()
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.smtp_transport.send") as send_mock,
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.smtp_transport.send") as send_mock,
         ):
             result = runner.invoke(
                 app,
@@ -1114,9 +1114,9 @@ class TestComposeSendCopyRetention:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client", return_value=client),
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client", return_value=client),
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -1154,9 +1154,9 @@ class TestComposeSendCopyRetention:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,
@@ -1194,9 +1194,9 @@ class TestComposeSendCopyRetention:
             return (msg.as_bytes(), _result())
 
         with (
-            patch("mailroom.__main__.load_config", return_value=cfg),
-            patch("mailroom.__main__._make_client") as make_client_mock,
-            patch("mailroom.smtp_transport.send", side_effect=fake_send),
+            patch("courier.__main__.load_config", return_value=cfg),
+            patch("courier.__main__._make_client") as make_client_mock,
+            patch("courier.smtp_transport.send", side_effect=fake_send),
         ):
             result = runner.invoke(
                 app,

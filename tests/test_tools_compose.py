@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
-from mailroom.models import Email, EmailAddress, EmailContent
-from mailroom.smtp_client import (
+from courier.models import Email, EmailAddress, EmailContent
+from courier.smtp_client import (
     compose_and_save_draft,
     create_mime,
 )
-from mailroom.tools import register_tools
+from courier.tools import register_tools
 from tests.conftest import patch_default_cli_config
 
 
@@ -197,7 +197,7 @@ class TestComposeAndSaveDraft:
 
 
 class TestComposeCLI:
-    """CLI `mailroom compose`."""
+    """CLI `courier compose`."""
 
     @pytest.fixture
     def mock_client(self):
@@ -212,12 +212,12 @@ class TestComposeCLI:
 
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -243,12 +243,12 @@ class TestComposeCLI:
     def test_output_to_stdout_contains_subject(self, mock_client):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -275,7 +275,7 @@ class TestComposeCLI:
     def test_output_to_file_with_attachment(self, mock_client, tmp_path):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
         out_path = tmp_path / "msg.eml"
@@ -283,7 +283,7 @@ class TestComposeCLI:
         attach_path.write_text("payload")
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -313,12 +313,12 @@ class TestComposeCLI:
     def test_multiple_recipients(self, mock_client):
         from typer.testing import CliRunner
 
-        from mailroom.__main__ import app
+        from courier.__main__ import app
 
         runner = CliRunner()
 
         with (
-            patch("mailroom.__main__._make_client", return_value=mock_client),
+            patch("courier.__main__._make_client", return_value=mock_client),
             patch_default_cli_config(),
         ):
             result = runner.invoke(
@@ -369,8 +369,8 @@ class TestComposeMCP:
         f = tmp_path / "a.txt"
         f.write_text("x")
 
-        with patch("mailroom.tools.get_client_from_context", return_value=imap_client):
-            with patch("mailroom.smtp_client.compose_and_save_draft") as mock_compose:
+        with patch("courier.tools.get_client_from_context", return_value=imap_client):
+            with patch("courier.smtp_client.compose_and_save_draft") as mock_compose:
                 mock_compose.return_value = {"status": "success", "draft_uid": 1}
                 await compose_tool(
                     to=["r@example.com"],

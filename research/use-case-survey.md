@@ -6,22 +6,22 @@ Re-snapshot when commercial agentic-email products ship a major new feature or w
 
 ## Top 10 use cases ranked by frequency of evidence
 
-| Rank | Use case | Evidence | Mailroom USP coverage |
+| Rank | Use case | Evidence | Courier USP coverage |
 |------|----------|----------|-----------------------|
 | 1 | Inbox triage / priority classification | Universal: n8n template 9157, LangGraph email-automation repo, DEV Community "saves 4 hours/week", Lindy, Zapier tutorials, Gemini "AI Inbox" launch (January 2026) | Partial. USPs #9 and #12 enable fast reads; no built-in classifier |
-| 2 | Thread summarization | Microsoft Copilot thread-summarize (August 2025), Google Gemini "AI Overview" for Gmail (January 2026), Shortwave tl;dr bundles, DEV triage post | Partial. USP #5 preserves threading context for the LLM; mailroom does not summarize itself |
+| 2 | Thread summarization | Microsoft Copilot thread-summarize (August 2025), Google Gemini "AI Overview" for Gmail (January 2026), Shortwave tl;dr bundles, DEV triage post | Partial. USP #5 preserves threading context for the LLM; courier does not summarize itself |
 | 3 | Draft reply in sender's tone | Superhuman Auto Draft (October 2025), Shortwave Ghostwriter, Gropius indie-hacker post (reads last 20 sent), Gemini "Help Me Write" tone-matching, LangChain `GmailCreateDraft` | USP #1 (identity / alias resolution) is a direct fit: the LLM must know which From to use. USP #2 covers rich-text drafts |
-| 4 | Follow-up reminders / unanswered-thread detection | n8n workflow 3123 "automatic reminders with human-in-the-loop", Jenova AI follow-up, Shortwave 2024 recap, Zapier client-follow-up automation | Gap. Mailroom has no built-in tracking state; USP #9 / #12 let an agent query for unanswered threads but reminder logic is for the orchestrator |
+| 4 | Follow-up reminders / unanswered-thread detection | n8n workflow 3123 "automatic reminders with human-in-the-loop", Jenova AI follow-up, Shortwave 2024 recap, Zapier client-follow-up automation | Gap. Courier has no built-in tracking state; USP #9 / #12 let an agent query for unanswered threads but reminder logic is for the orchestrator |
 | 5 | Archive / semantic search | Google Gemini natural-language inbox Q&A ("who was the plumber last year?"), Shortwave AI search, LlamaIndex Gmail Loader for RAG | USP #7 (X-GM-RAW), USP #8 (local cache), USP #9 (DSL). Strongest coverage area |
 | 6 | Meeting / calendar coordination from email | MXtoAI `schedule@mxtoai.com` HN demo, Make.com plus Google Calendar tutorial (Substack), Relevance AI Gmail agent with calendar-event extraction | USP #10 (.ics RSVP) is narrow but real. Broader extraction is a gap |
-| 7 | Auto-categorise and label / filter emails | n8n 5-category classifier, LangGraph email-automation, Shortwave Tasklet (October 2025), Gemini "AI priorities" | Gap (positioning). Mailroom has `move` and `flag` tools but does not surface label/route as a USP |
+| 7 | Auto-categorise and label / filter emails | n8n 5-category classifier, LangGraph email-automation, Shortwave Tasklet (October 2025), Gemini "AI priorities" | Gap (positioning). Courier has `move` and `flag` tools but does not surface label/route as a USP |
 | 8 | Customer support ticket handling | kaymen99/langgraph-email-automation repo, LangGraph complaint / inquiry / feedback classes, Lindy support workflow | Partial. USP #12 lets agent fan-out reads. USP #1 ensures reply comes from right support alias |
 | 9 | Multi-account unified view / search | Shortwave limitation (Gmail only), Lindy multi-account, virtualworkforce.ai Outlook AI | USP #11 (`-A` simultaneous multi-account). Direct, differentiated coverage |
 | 10 | Newsletter digest / batch summarize | MXtoAI newsletter alias, DEV triage post (2% read rate before automation), n8n newsletter workflow | USP #3 (Sieve redaction) can suppress newsletter bodies before they reach the LLM. Indirect but real fit |
 
 ## Top 5 LLM-plus-email pain points
 
-| Pain point | Evidence | Mailroom coverage |
+| Pain point | Evidence | Courier coverage |
 |------------|----------|-------------------|
 | 1. Prompt injection via email body | OWASP #1 LLM risk 2025; Microsoft EchoLeak CVE-2025-32711; ShadowLeak (September 2025) in ChatGPT Deep Research; Immersive Labs HTML hidden-div attack; SC Media malicious invoice with hidden div; BankInfoSecurity Gemini risk | USP #3 (Sieve-based redaction) is the only per-mailbox blank-out policy in any open-source IMAP MCP tool surveyed. Strong, differentiated |
 | 2. Wrong sender identity / alias confusion | AgentMail blog "email as identity for AI agents" (2025); Highflame "agent identity crisis"; multiple indie devs reporting drafts sent from personal address instead of role address; Gropius reads last 20 sent emails as a workaround | USP #1 is the direct solution; no competing open-source IMAP MCP handles alias / plus-tag mapping |
@@ -31,11 +31,11 @@ Re-snapshot when commercial agentic-email products ship a major new feature or w
 
 ## What commercial agents are marketing
 
-| Commercial pitch | Product(s) | Does mailroom match? |
+| Commercial pitch | Product(s) | Does courier match? |
 |------------------|------------|----------------------|
-| "Summarize any thread instantly" | Copilot in Outlook (Microsoft Docs, August 2025), Gemini AI Overview for Gmail (Google Blog, January 2026), Shortwave tl;dr | No. Mailroom does not summarize; it provides the raw thread with proper context to an LLM that does |
+| "Summarize any thread instantly" | Copilot in Outlook (Microsoft Docs, August 2025), Gemini AI Overview for Gmail (Google Blog, January 2026), Shortwave tl;dr | No. Courier does not summarize; it provides the raw thread with proper context to an LLM that does |
 | "Writes in your voice" | Superhuman Auto Draft (October 2025), Shortwave Ghostwriter, Gemini Help Me Write tone-matching (January 2026) | Partial. USP #1 ensures the draft uses the right From. Tone is left to the LLM layer |
-| "Inbox zero automation, label, archive, route" | Shortwave Tasklet (October 2025), Gmail Gemini AI priorities, Lindy triage agents | Gap. Mailroom has no write-to-labels or move-to-folder USP. Common ask, no headline coverage |
+| "Inbox zero automation, label, archive, route" | Shortwave Tasklet (October 2025), Gmail Gemini AI priorities, Lindy triage agents | Gap. Courier has no write-to-labels or move-to-folder USP. Common ask, no headline coverage |
 | "Natural language inbox search" | Gemini NL Q&A for Gmail (Google Workspace Blog, May 2025); Shortwave AI search | USP #9 (Gmail-style DSL) plus USP #7 (X-GM-RAW passthrough) plus USP #8 (local cache) cover this for technical users wiring their own agent |
 | "Works across all your accounts" | Lindy multi-account; Copilot for Microsoft 365 multi-mailbox | USP #11 (`-A`). Shortwave's Gmail-only limitation leaves a real gap in the commercial market |
 
@@ -44,7 +44,7 @@ Re-snapshot when commercial agentic-email products ship a major new feature or w
 **Broad demand (top 3 pain points or top 5 use cases):**
 
 - USP #1 (identity / alias resolution on reply): pain point #2 and use case #3. No commercial tool solves it at the IMAP layer for CLI / MCP users.
-- USP #9 plus USP #7: archive search is use case #5 and Gemini's most-marketed natural-language feature. Mailroom's DSL is the technical equivalent for non-Gmail IMAP.
+- USP #9 plus USP #7: archive search is use case #5 and Gemini's most-marketed natural-language feature. Courier's DSL is the technical equivalent for non-Gmail IMAP.
 - USP #3 (Sieve redaction): prompt injection is OWASP #1. Narrow implementation but solves the highest-severity LLM-plus-email risk.
 - USP #12 plus USP #11: directly reduce the fan-out cost that makes triage (use case #1) expensive at scale. No commercial competitor exposes this to developers.
 
@@ -62,9 +62,9 @@ Re-snapshot when commercial agentic-email products ship a major new feature or w
 
 **Gap vs what people actually ask for:**
 
-- Label / move / archive write operations: use case #7 is everywhere in tutorials. Mailroom has the surface; positioning is missing.
-- Follow-up reminder state tracking: use case #4. Requires persisted state across sessions, beyond mailroom's current scope.
-- OAuth / credential lifecycle management: pain point #3. Mailroom documents it but does not automate token refresh.
+- Label / move / archive write operations: use case #7 is everywhere in tutorials. Courier has the surface; positioning is missing.
+- Follow-up reminder state tracking: use case #4. Requires persisted state across sessions, beyond courier's current scope.
+- OAuth / credential lifecycle management: pain point #3. Courier documents it but does not automate token refresh.
 
 ## Bottom line
 

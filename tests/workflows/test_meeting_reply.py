@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from mailroom.workflows.meeting_reply import (
+from courier.workflows.meeting_reply import (
     _format_meeting_time,
     _generate_accept_reply,
     _generate_decline_reply,

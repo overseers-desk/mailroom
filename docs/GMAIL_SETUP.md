@@ -1,6 +1,6 @@
-# Setting up Gmail Authentication for Mailroom
+# Setting up Gmail Authentication for Courier
 
-There are two ways to authenticate with Gmail for Mailroom:
+There are two ways to authenticate with Gmail for Courier:
 
 1. **App Password** (recommended, simpler): Uses a special password generated specifically for your app
 2. **OAuth2 Authentication**: Uses Google's OAuth2 protocol (requires Google Cloud Platform setup)
@@ -15,24 +15,24 @@ This is the simplest approach and requires just a few steps:
 
 2. Generate an App Password:
    - Go to [App Passwords](https://myaccount.google.com/apppasswords)
-   - Select "Mail" as the app and choose a device name (e.g., "Mailroom")
+   - Select "Mail" as the app and choose a device name (e.g., "Courier")
    - Click "Generate" and copy the 16-character password
 
-3. Set up Mailroom with your app password:
+3. Set up Courier with your app password:
 
 ```bash
 # Run the Gmail app password setup tool
-uv run -m mailroom.app_password --username your.email@gmail.com
+uv run -m courier.app_password --username your.email@gmail.com
 ```
 
-You'll be prompted to enter your app password, and the tool will configure Mailroom to use Gmail with your app password.
+You'll be prompted to enter your app password, and the tool will configure Courier to use Gmail with your app password.
 
 ## App Password Command-Line Options
 
 The Gmail app password tool supports several options:
 
 ```bash
-uv run -m mailroom.app_password --help
+uv run -m courier.app_password --help
 ```
 
 Common options include:
@@ -65,7 +65,7 @@ If you need OAuth2 authentication instead of app passwords:
 1. Create a Google Cloud Platform project
 2. Enable the Gmail API
 3. Create OAuth2 credentials (client ID and secret)
-4. Configure Mailroom with those credentials
+4. Configure Courier with those credentials
 
 This method is more complex but available if needed. See our OAuth2 documentation for details.
 
