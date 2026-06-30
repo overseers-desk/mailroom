@@ -1,3 +1,11 @@
+courier (1.1.16) unstable; urgency=medium
+
+  * Project renamed from mailroom to courier; package name on PyPI is now courier.
+  * Install via pip: pip install courier or pip install "courier[mcp]".
+  * PyPI install path added to installation documentation.
+
+ -- Weiwu Zhang <a@colourful.land>  Mon, 30 Jun 2026 00:00:00 +0000
+
 courier (1.1.15) unstable; urgency=medium
 
   * compose --to is now optional, enabling Bcc-only sends.

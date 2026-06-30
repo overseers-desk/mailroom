@@ -1,5 +1,5 @@
 Name:           courier
-Version:        1.1.15
+Version:        1.1.16
 Release:        1%{?dist}
 Summary:        Email toolkit for AI assistants and command-line scripting
 License:        MIT
@@ -67,6 +67,10 @@ install -Dpm 644 debian/courier.1 %{buildroot}%{_mandir}/man1/courier.1
 %{_mandir}/man1/courier.1*
 
 %changelog
+* Mon Jun 30 2026 Weiwu Zhang <a@colourful.land> - 1.1.16-1
+- Project renamed from mailroom to courier; package name on PyPI is now courier.
+- Install via pip: pip install courier or pip install "courier[mcp]".
+
 * Thu Jun 25 2026 Weiwu Zhang <a@colourful.land> - 1.1.15-1
 - compose --to is now optional, enabling Bcc-only sends.
 - free-form --smtp send refuses when no copy can be filed.
